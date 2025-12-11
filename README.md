@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📮 Pencen Mobile (MyDigital ID Integration)
+**NexG Godam Lah! 2.0 - Team Leveling**
 
-## Getting Started
+## 💡 Overview
+Pencen Mobile is an **Offline-First Identity Verification System** designed for Pos Malaysia agents to disburse pensions to bedridden elderly citizens in rural areas (Sabah/Sarawak).
 
-First, run the development server:
+It replaces manual paperwork with a secure **"Tap-and-Verify"** protocol using the National ID (MyKad) and Biometric Proof of Life.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🛠️ Technical Architecture (Prototype)
+This proof-of-concept simulates the hardware-software handshake required for field operations.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+* **Frontend:** Next.js 14 (App Router), Tailwind CSS, Framer Motion.
+* **Security Protocol:** Simulates a 3-factor authentication flow:
+    1.  **Agent Auth:** Validates Agent ID (Mocked).
+    2.  **Possession Factor:** Simulates NFC reading of the MyKad chip.
+    3.  **Inherence Factor:** Simulates Biometric Thumbprint matching against the chip.
+* **Geolocation:** Simulates GPS fencing to ensure the agent is physically at the registered address.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ⚠️ Note to Judges
+To respect data privacy (PDPA) and ensure stability during the demo, this prototype uses **Simulated Data**.
+* **Hardware Simulation:** The 2.5s delay during scanning represents the latency of the `pyscard` / smart card reader hardware.
+* **Mock Database:** No real citizen data is stored or accessed.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🚀 Getting Started
+1.  Login with Agent ID: `POS-MY-9921`
+2.  Click "Read MyKad" to simulate the NFC tap.
+3.  Click "Acquire GPS" to verify location.
+4.  Click "Scan Thumbprint" to complete the Proof of Life.

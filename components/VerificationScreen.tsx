@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cpu, ChevronLeft, Check, Fingerprint, MapPin, AlertCircle, UserX, Home, AlertTriangle, ScanLine, Radar, Building2, Users } from 'lucide-react';
+import { Cpu, ChevronLeft, CheckCircle2, Fingerprint, MapPin, AlertCircle, UserX, Home, AlertTriangle, ScanLine, Radar, Satellite, Check, Building2, Users } from 'lucide-react';
 import { Beneficiary, VerificationType } from '../types';
 
 interface VerificationScreenProps {
@@ -60,9 +60,9 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
   };
 
   const handleException = (reason: ExceptionReason) => {
+     // For now, these just bypass the scan for demo purposes
      if (reason === 'DECEASED' || reason === 'DAMAGED_ID') {
-         // Defaulting to HOME for exceptions if needed, or handle as specific exception type
-         onScanComplete('HOME'); 
+         onScanComplete('HOME'); // Default to HOME for exceptions for now
      } else if (reason === 'NOT_AT_HOME') {
          onBack();
      }
@@ -84,7 +84,7 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
           </button>
       </div>
 
-      {/* --- PRE-SCAN INTERFACE: MODE SELECTION --- */}
+      {/* --- PRE-SCAN INTERFACE --- */}
       {scanStage === 'PRE_SCAN' && (
            <div className="flex-1 flex flex-col items-center justify-center bg-white md:bg-transparent rounded-3xl h-full relative">
                <div className="w-full max-w-sm space-y-6">
@@ -106,12 +106,11 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                    <div className="space-y-4 pt-2">
                        <div className="flex items-center gap-3">
                            <div className="h-px bg-gray-200 flex-1"></div>
-                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select Protocol</span>
+                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select Mode</span>
                            <div className="h-px bg-gray-200 flex-1"></div>
                        </div>
 
                        <div className="grid grid-cols-1 gap-3">
-                           {/* MODE A: COMMUNITY HALL */}
                            <button 
                              onClick={() => handleModeSelect('HALL')}
                              className="relative w-full p-4 bg-white border-2 border-blue-100 rounded-xl hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 transition-all text-left group overflow-hidden"
@@ -120,18 +119,17 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                                    <Building2 size={64} className="text-blue-900" />
                                </div>
                                <div className="flex items-start gap-3 relative z-10">
-                                   <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+                                   <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                                        <Users size={20} />
                                    </div>
                                    <div>
-                                       <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-0.5 block">Mode A</span>
-                                       <h3 className="font-bold text-gov-900 text-lg leading-tight">Community Hall</h3>
-                                       <p className="text-xs text-gray-500 mt-1 leading-snug">Batch verification for healthy pensioners at Dewan.</p>
+                                       <span className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-0.5 block">Mode A</span>
+                                       <h3 className="font-bold text-gov-900 text-lg">Community Hall</h3>
+                                       <p className="text-xs text-gray-500 mt-1">Batch verification for healthy pensioners.</p>
                                    </div>
                                </div>
                            </button>
 
-                           {/* MODE B: HOME VISIT */}
                            <button 
                              onClick={() => handleModeSelect('HOME')}
                              className="relative w-full p-4 bg-white border-2 border-orange-100 rounded-xl hover:border-orange-500 hover:shadow-lg hover:shadow-orange-500/10 transition-all text-left group overflow-hidden"
@@ -140,13 +138,13 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                                    <Home size={64} className="text-orange-900" />
                                </div>
                                <div className="flex items-start gap-3 relative z-10">
-                                   <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors shrink-0">
+                                   <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
                                        <Home size={20} />
                                    </div>
                                    <div>
-                                       <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-0.5 block">Mode B</span>
-                                       <h3 className="font-bold text-gov-900 text-lg leading-tight">Home Visit</h3>
-                                       <p className="text-xs text-gray-500 mt-1 leading-snug">Targeted, GPS-locked visits for bedridden patients.</p>
+                                       <span className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-0.5 block">Mode B</span>
+                                       <h3 className="font-bold text-gov-900 text-lg">Home Visit</h3>
+                                       <p className="text-xs text-gray-500 mt-1">GPS-locked visits for bedridden patients.</p>
                                    </div>
                                </div>
                            </button>
