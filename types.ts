@@ -8,6 +8,8 @@ export interface Kampung {
   state: string;
   postcode: string;
   geography: Geography;
+  lat: number;
+  lng: number;
 }
 
 export type Beneficiary = {

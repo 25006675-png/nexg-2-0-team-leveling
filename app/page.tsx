@@ -91,6 +91,7 @@ const App: React.FC = () => {
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [isOffline, setIsOffline] = useState(false);
+  const [isDevMode, setIsDevMode] = useState(false);
 
   // Patch addresses and geography when Kampung changes, and merge with Local Storage
   useEffect(() => {
@@ -355,6 +356,7 @@ const App: React.FC = () => {
                         key="geo"
                         kampung={selectedKampung}
                         onSuccess={handleGeoSuccess}
+                        isDevMode={isDevMode}
                     />
                   )}
                   {step === 'dashboard' && selectedKampung && (
@@ -398,6 +400,17 @@ const App: React.FC = () => {
 
           <div className="py-4 bg-white/50 md:bg-transparent text-center text-[10px] text-gray-400 border-t border-gray-100 md:border-none shrink-0 font-mono uppercase tracking-widest">
             Ketua Kampung Access v3.0
+          </div>
+
+          {/* Dev Mode Toggle */}
+          <div className="fixed bottom-4 left-4 z-50">
+            <button 
+              onClick={() => setIsDevMode(!isDevMode)}
+              className={`p-2 rounded-full shadow-lg transition-all ${isDevMode ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-500'}`}
+              title={isDevMode ? "Developer Mode ON" : "Developer Mode OFF"}
+            >
+              <Shield size={16} />
+            </button>
           </div>
         </div>
       </div>

@@ -11,11 +11,11 @@ interface LoginScreenProps {
 }
 
 const KAMPUNGS: Kampung[] = [
-  { id: '1', name: 'Kg. Ulu Tembeling', state: 'Pahang', postcode: '27000', geography: 'DEEP_RURAL' },
-  { id: '2', name: 'Kg. Parit Jawa', state: 'Johor', postcode: '84000', geography: 'RURAL' },
-  { id: '3', name: 'Kg. Seberang Takir', state: 'Terengganu', postcode: '21300', geography: 'RURAL' },
-  { id: '4', name: 'Kg. Kinabatangan', state: 'Sabah', postcode: '90200', geography: 'DEEP_RURAL' },
-  { id: '5', name: 'Kg. Changkat Jering', state: 'Perak', postcode: '34850', geography: 'RURAL' },
+  { id: '1', name: 'Kampung Buayan, Penampang', state: 'Sabah', postcode: '89500', geography: 'DEEP_RURAL', lat: 5.7723, lng: 116.1922 },
+  { id: '2', name: 'Kg. Parit Jawa', state: 'Johor', postcode: '84000', geography: 'RURAL', lat: 1.95, lng: 102.63 },
+  { id: '3', name: 'Kg. Seberang Takir', state: 'Terengganu', postcode: '21300', geography: 'RURAL', lat: 5.34, lng: 103.13 },
+  { id: '4', name: 'Kg. Kinabatangan', state: 'Sabah', postcode: '90200', geography: 'DEEP_RURAL', lat: 5.42, lng: 117.98 },
+  { id: '5', name: 'Kg. Changkat Jering', state: 'Perak', postcode: '34850', geography: 'RURAL', lat: 4.79, lng: 100.72 },
 ];
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId }) => {
