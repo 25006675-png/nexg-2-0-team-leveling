@@ -17,7 +17,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ isDevMode, setIsDevMode
       className="h-full flex flex-col p-6 md:p-0"
     >
       <div className="mb-8 flex items-center gap-4">
-        <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gov-900 md:hidden">
+        <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gov-900">
             <ArrowLeft size={24} />
         </button>
         <div>

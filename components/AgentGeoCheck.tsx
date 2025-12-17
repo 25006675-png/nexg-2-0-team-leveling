@@ -44,8 +44,11 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
+    // If Dev Mode is ON, we can bypass the real GPS check if it fails, 
+    // OR we can just mock the success callback directly.
+    // To be safe and robust, let's try to get position, but if it fails and we are in Dev Mode, we recover.
+    
+    const handleSuccess = (position: GeolocationPosition) => {
         setStatus('FOUND');
         
         // Simulate a small delay for "Verifying" animation
@@ -77,13 +80,50 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
              setErrorMsg(`You are ${Math.round(dist)}m away. Must be within 500m.`);
           }
         }, 1500);
-      },
-      (error) => {
+    };
+
+    const handleError = (error: GeolocationPositionError) => {
         console.error(error);
-        setErrorMsg('Unable to retrieve your location. Please enable GPS.');
+        
+        if (isDevMode) {
+            // If Dev Mode is on, we ignore the error and simulate success with fake coordinates
+            const fakePosition = {
+                coords: {
+                    latitude: kampung.lat,
+                    longitude: kampung.lng,
+                    accuracy: 10,
+                    altitude: null,
+                    altitudeAccuracy: null,
+                    heading: null,
+                    speed: null
+                },
+                timestamp: Date.now()
+            } as GeolocationPosition;
+            
+            handleSuccess(fakePosition);
+            return;
+        }
+
+        let msg = 'Unable to retrieve your location.';
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                msg = 'Location permission denied. Please enable it in your browser settings.';
+                break;
+            case error.POSITION_UNAVAILABLE:
+                msg = 'Location information is unavailable.';
+                break;
+            case error.TIMEOUT:
+                msg = 'The request to get user location timed out.';
+                break;
+        }
+        setErrorMsg(msg);
         setStatus('FAILED');
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      handleSuccess,
+      handleError,
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
