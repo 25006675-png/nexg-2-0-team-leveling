@@ -15,6 +15,7 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
   const [status, setStatus] = useState<GeoStatus>('SEARCHING');
   const [distance, setDistance] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
   // Haversine formula to calculate distance in meters
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -59,6 +60,8 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
             userLat = kampung.lat;
             userLng = kampung.lng;
           }
+
+          setUserLocation({ lat: userLat, lng: userLng });
 
           const dist = calculateDistance(userLat, userLng, kampung.lat, kampung.lng);
           setDistance(Math.round(dist));
@@ -134,9 +137,16 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
              </motion.div>
 
              {/* Connecting Line Simulation */}
-             {status === 'VERIFYING' && (
-                 <div className="absolute top-0 right-0 bg-gov-900 text-white text-[10px] font-mono px-2 py-1 rounded">
-                     LAT: {kampung.lat.toFixed(3)}<br/>LNG: {kampung.lng.toFixed(3)}
+             {(status === 'VERIFYING' || status === 'SUCCESS' || status === 'FAILED') && userLocation && (
+                 <div className="absolute top-0 right-0 flex flex-col gap-1 items-end">
+                    <div className="bg-blue-900 text-white text-[10px] font-mono px-2 py-1 rounded shadow-sm text-right">
+                        <span className="text-blue-300 text-[8px] uppercase block">Target</span>
+                        LAT: {kampung.lat.toFixed(4)}<br/>LNG: {kampung.lng.toFixed(4)}
+                    </div>
+                    <div className="bg-white border border-gray-200 text-gray-600 text-[10px] font-mono px-2 py-1 rounded shadow-sm text-right">
+                        <span className="text-gray-400 text-[8px] uppercase block">You {isDevMode && '(DEV)'}</span>
+                        LAT: {userLocation.lat.toFixed(4)}<br/>LNG: {userLocation.lng.toFixed(4)}
+                    </div>
                  </div>
              )}
          </div>

@@ -2,16 +2,17 @@
 // Force rebuild
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { LogOut, Battery, Signal, Shield, Check, ChevronLeft, MapPin } from 'lucide-react';
+import { LogOut, Battery, Signal, Shield, Check, ChevronLeft, MapPin, Settings } from 'lucide-react';
 import LoginScreen from '../components/LoginScreen';
 import AgentGeoCheck from '../components/AgentGeoCheck';
 import DashboardScreen from '../components/DashboardScreen';
 import VerificationScreen from '../components/ScanScreen';
 import ConfirmationScreen from '../components/VerifyScreen';
 import SuccessScreen from '../components/SuccessScreen';
+import SettingsScreen from '../components/SettingsScreen';
 import { Beneficiary, Kampung, VerificationType } from '../types';
 
-export type Step = 'login' | 'geo_check' | 'dashboard' | 'verification' | 'confirmation' | 'success';
+export type Step = 'login' | 'geo_check' | 'dashboard' | 'verification' | 'confirmation' | 'success' | 'settings';
 
 // Helper to get a date relative to today
 const getRelativeDate = (daysAgo: number) => {
@@ -188,6 +189,14 @@ const App: React.FC = () => {
         setStep('dashboard');
         setSelectedBeneficiary(null);
         break;
+      case 'settings':
+        // Return to previous logical step, defaulting to dashboard if logged in, or login if not
+        if (selectedKampung) {
+            setStep('dashboard');
+        } else {
+            setStep('login');
+        }
+        break;
       default:
         break;
     }
@@ -244,7 +253,8 @@ const App: React.FC = () => {
     dashboard: 'Eligible Citizens',
     verification: 'Identity',
     confirmation: 'Confirm',
-    success: 'Done'
+    success: 'Done',
+    settings: 'Settings'
   };
 
   return (
@@ -305,11 +315,16 @@ const App: React.FC = () => {
                 )}
             </div>
 
-            <div className="z-10 relative">
+            <div className="z-10 relative space-y-2">
                  {step !== 'login' && (
-                    <button onClick={handleLogout} className="flex items-center gap-3 text-sm font-medium text-red-300 hover:text-white hover:bg-red-500/20 w-full p-3 rounded-lg transition-all">
-                        <LogOut size={18} /> Exit Access
-                    </button>
+                    <>
+                        <button onClick={() => setStep('settings')} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'settings' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
+                            <Settings size={18} /> Settings
+                        </button>
+                        <button onClick={handleLogout} className="flex items-center gap-3 text-sm font-medium text-red-300 hover:text-white hover:bg-red-500/20 w-full p-3 rounded-lg transition-all">
+                            <LogOut size={18} /> Exit Access
+                        </button>
+                    </>
                  )}
             </div>
         </aside>
@@ -394,23 +409,20 @@ const App: React.FC = () => {
                       onReset={() => setStep('dashboard')} 
                     />
                   )}
+                  {step === 'settings' && (
+                    <SettingsScreen
+                        key="settings"
+                        isDevMode={isDevMode}
+                        setIsDevMode={setIsDevMode}
+                        onBack={handleBack}
+                    />
+                  )}
                 </AnimatePresence>
               </div>
           </div>
 
           <div className="py-4 bg-white/50 md:bg-transparent text-center text-[10px] text-gray-400 border-t border-gray-100 md:border-none shrink-0 font-mono uppercase tracking-widest">
             Ketua Kampung Access v3.0
-          </div>
-
-          {/* Dev Mode Toggle */}
-          <div className="fixed bottom-4 left-4 z-50">
-            <button 
-              onClick={() => setIsDevMode(!isDevMode)}
-              className={`p-2 rounded-full shadow-lg transition-all ${isDevMode ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-500'}`}
-              title={isDevMode ? "Developer Mode ON" : "Developer Mode OFF"}
-            >
-              <Shield size={16} />
-            </button>
           </div>
         </div>
       </div>
