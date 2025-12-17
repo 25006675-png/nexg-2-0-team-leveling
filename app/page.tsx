@@ -93,6 +93,7 @@ const App: React.FC = () => {
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [isDevMode, setIsDevMode] = useState(false);
+  const [previousStep, setPreviousStep] = useState<Step>('login');
 
   // Patch addresses and geography when Kampung changes, and merge with Local Storage
   useEffect(() => {
@@ -190,12 +191,8 @@ const App: React.FC = () => {
         setSelectedBeneficiary(null);
         break;
       case 'settings':
-        // Return to previous logical step, defaulting to dashboard if logged in, or login if not
-        if (selectedKampung) {
-            setStep('dashboard');
-        } else {
-            setStep('login');
-        }
+        // Return to previous logical step
+        setStep(previousStep);
         break;
       default:
         break;
@@ -251,7 +248,7 @@ const App: React.FC = () => {
     login: 'Login',
     geo_check: 'Zone Check',
     dashboard: 'Eligible Citizens',
-    verification: 'Identity',
+    verification: 'Identity Check',
     confirmation: 'Confirm',
     success: 'Done',
     settings: 'Settings'
@@ -318,7 +315,7 @@ const App: React.FC = () => {
             <div className="z-10 relative space-y-2">
                  {step !== 'login' && (
                     <>
-                        <button onClick={() => setStep('settings')} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'settings' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
+                        <button onClick={() => { setPreviousStep(step); setStep('settings'); }} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'settings' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
                             <Settings size={18} /> Settings
                         </button>
                         <button onClick={handleLogout} className="flex items-center gap-3 text-sm font-medium text-red-300 hover:text-white hover:bg-red-500/20 w-full p-3 rounded-lg transition-all">
