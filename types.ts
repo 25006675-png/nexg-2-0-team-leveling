@@ -17,8 +17,6 @@ export type Beneficiary = {
   name: string;
   status: string; // Kept for backend compatibility but not shown in UI
   geography: Geography;
-  isOku: boolean; 
-  scheme: 'A' | 'B'; // A = Auto-credit, B = Physical/Cash
   lastScanDate: string; 
   monthlyPayout: number;
   pendingMonths: number;

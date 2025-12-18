@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, CheckCircle2, MapPin, CreditCard, ArrowDown, Users, AlertCircle, Wifi, WifiOff, CloudUpload, Home, Building2 } from 'lucide-react';
 import { Beneficiary, Kampung } from '../types';
+import { OfflineManager } from '../utils/OfflineManager';
 
 interface DashboardScreenProps {
   onSelectBeneficiary: (beneficiary: Beneficiary) => void;
@@ -22,6 +23,26 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   setIsOffline,
   onSync
 }) => {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showSyncSuccess, setShowSyncSuccess] = useState(false);
+
+  // Note: Network detection is handled globally in page.tsx and passed via isOffline prop
+
+  const handleManualSync = () => {
+      setIsSyncing(true);
+      setTimeout(() => {
+          const queue = OfflineManager.getQueue();
+          OfflineManager.moveToHistory(queue);
+          OfflineManager.clearQueue();
+          
+          onSync(); // Trigger parent sync logic
+          setIsSyncing(false);
+          setShowSyncSuccess(true);
+          alert(`Batch Sync Complete.\n\n${queue.length} Records uploaded to KWAP.`);
+          setTimeout(() => setShowSyncSuccess(false), 3000);
+      }, 2000);
+  };
+
   // Sorting Logic - Alphabetical standard list
   const sortedBeneficiaries = useMemo(() => {
     return [...beneficiaries].sort((a, b) => a.name.localeCompare(b.name));
@@ -38,6 +59,18 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       exit={{ opacity: 0, x: -20 }}
       className="h-full flex flex-col p-6 md:p-0"
     >
+      {showSyncSuccess && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg z-50 flex items-center gap-2"
+          >
+              <CheckCircle2 size={20} />
+              <span className="font-bold text-sm">Data Synced Successfully</span>
+          </motion.div>
+      )}
+
       <div className="mb-6 shrink-0 bg-gov-50 p-4 rounded-xl border border-gov-100">
           <div className="flex justify-between items-start mb-4">
             <div>
@@ -56,14 +89,23 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 </div>
             </div>
             
-            {/* Offline Mode Toggle */}
-            <button 
-                onClick={() => setIsOffline(!isOffline)}
-                className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${isOffline ? 'bg-gray-200 border-gray-300 text-gray-600' : 'bg-green-100 border-green-200 text-green-700'}`}
-            >
-                {isOffline ? <WifiOff size={16} /> : <Wifi size={16} />}
-                <span className="text-[10px] font-bold mt-1 uppercase">{isOffline ? 'Offline' : 'Online'}</span>
-            </button>
+            <div className="flex items-center gap-2">
+                {/* Pending Uploads Indicator */}
+                {pendingSyncList.length > 0 && (
+                    <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-lg border border-blue-100">
+                        <CloudUpload size={14} />
+                        <span className="text-xs font-bold">{pendingSyncList.length}</span>
+                    </div>
+                )}
+
+                {/* Network Status Indicator */}
+                <div 
+                    className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${isOffline ? 'bg-red-100 border-red-200 text-red-600' : 'bg-green-100 border-green-200 text-green-700'}`}
+                >
+                    {isOffline ? <WifiOff size={16} /> : <Wifi size={16} />}
+                    <span className="text-[10px] font-bold mt-1 uppercase">{isOffline ? 'Offline' : 'Online'}</span>
+                </div>
+            </div>
           </div>
 
           {/* Sync Status Banner */}
@@ -78,10 +120,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       <span className="text-xs font-bold text-blue-800">{pendingSyncList.length} records pending sync</span>
                   </div>
                   <button 
-                    onClick={onSync}
-                    className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded shadow-sm hover:bg-blue-700 transition-colors"
+                    onClick={handleManualSync}
+                    disabled={isSyncing}
+                    className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
-                      Sync Now
+                      {isSyncing ? <RefreshCw size={12} className="animate-spin" /> : null}
+                      {isSyncing ? 'Syncing...' : 'Sync Now'}
                   </button>
               </motion.div>
           )}
@@ -140,7 +184,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Status</span>
                                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 flex items-center gap-1">
                                          <AlertCircle size={10} />
-                                         Pending Payment
+                                         Pending Verification
                                      </span>
                                   </div>
                               </div>

@@ -2,7 +2,7 @@
 // Force rebuild
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { LogOut, Battery, Signal, Shield, Check, ChevronLeft, MapPin, Settings } from 'lucide-react';
+import { LogOut, Battery, Signal, Shield, Check, ChevronLeft, MapPin, Settings, FileText } from 'lucide-react';
 import LoginScreen from '../components/LoginScreen';
 import AgentGeoCheck from '../components/AgentGeoCheck';
 import DashboardScreen from '../components/DashboardScreen';
@@ -10,80 +10,11 @@ import VerificationScreen from '../components/ScanScreen';
 import ConfirmationScreen from '../components/VerifyScreen';
 import SuccessScreen from '../components/SuccessScreen';
 import SettingsScreen from '../components/SettingsScreen';
+import HistoryScreen from '../components/HistoryScreen';
 import { Beneficiary, Kampung, VerificationType } from '../types';
+import { BENEFICIARIES_BY_KAMPUNG } from '../utils/mockData';
 
-export type Step = 'login' | 'geo_check' | 'dashboard' | 'verification' | 'confirmation' | 'success' | 'settings';
-
-// Helper to get a date relative to today
-const getRelativeDate = (daysAgo: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  return date.toISOString().split('T')[0];
-};
-
-// Initial Data Set (Addresses will be patched)
-const RAW_DATA: Beneficiary[] = [
-  { 
-    ic: "500101-13-1234", 
-    name: "Haji Abu Bakar", 
-    status: "Active",
-    geography: 'DEEP_RURAL', // Placeholder, will be overwritten
-    isOku: false,
-    scheme: "B",
-    lastScanDate: getRelativeDate(28),
-    monthlyPayout: 1250,
-    pendingMonths: 3,
-    address: "PLACEHOLDER",
-    lastPaid: "Dec 2024",
-    photoUrl: "https://randomuser.me/api/portraits/men/75.jpg",
-    completed: false
-  },
-  { 
-    ic: "450101-03-2222", 
-    name: "Mariam Isa", 
-    status: "Active", 
-    geography: 'RURAL', // Placeholder
-    isOku: true,
-    scheme: "B",
-    lastScanDate: getRelativeDate(30),
-    monthlyPayout: 850,
-    pendingMonths: 3,
-    address: "PLACEHOLDER",
-    lastPaid: "Dec 2024",
-    photoUrl: "https://randomuser.me/api/portraits/women/66.jpg",
-    completed: false
-  },
-  { 
-    ic: "750101-10-1111", 
-    name: "Fatimah Binti Ali", 
-    status: "Active", 
-    geography: 'RURAL', // Placeholder
-    isOku: false,
-    scheme: "B",
-    lastScanDate: getRelativeDate(25),
-    monthlyPayout: 950,
-    pendingMonths: 1,
-    address: "PLACEHOLDER",
-    lastPaid: "Feb 2025",
-    photoUrl: "https://randomuser.me/api/portraits/women/24.jpg",
-    completed: false
-  },
-  { 
-    ic: "880303-01-9988", 
-    name: "Wong Wei Chen", 
-    status: "Active", 
-    geography: 'DEEP_RURAL', // Placeholder
-    isOku: true,
-    scheme: "B",
-    lastScanDate: getRelativeDate(35),
-    monthlyPayout: 1100,
-    pendingMonths: 2,
-    address: "PLACEHOLDER",
-    lastPaid: "Jan 2025",
-    photoUrl: "https://randomuser.me/api/portraits/men/22.jpg",
-    completed: false
-  },
-];
+export type Step = 'login' | 'geo_check' | 'dashboard' | 'verification' | 'confirmation' | 'success' | 'settings' | 'history';
 
 const App: React.FC = () => {
   const [step, setStep] = useState<Step>('login');
@@ -95,22 +26,37 @@ const App: React.FC = () => {
   const [isDevMode, setIsDevMode] = useState(false);
   const [previousStep, setPreviousStep] = useState<Step>('login');
 
+  // Global Network Detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial check
+    if (!navigator.onLine) {
+        setIsOffline(true);
+    }
+
+    return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Patch addresses and geography when Kampung changes, and merge with Local Storage
   useEffect(() => {
     if (selectedKampung) {
-      // 1. Generate Base Data
-      const patchedData = RAW_DATA.map((b, index) => ({
-        ...b,
-        geography: selectedKampung.geography, // All beneficiaries in this list belong to the selected kampung
-        address: `No. ${10 + index * 5}, Jalan Utama, ${selectedKampung.name}, ${selectedKampung.postcode} ${selectedKampung.state}`
-      }));
+      // 1. Get Base Data
+      const baseData = BENEFICIARIES_BY_KAMPUNG[selectedKampung.id] || [];
 
       // 2. Check Local Storage
       const storedData = localStorage.getItem('pencen_app_data');
       if (storedData) {
           try {
               const parsed: Record<string, Partial<Beneficiary>> = JSON.parse(storedData);
-              const merged = patchedData.map(b => {
+              const merged = baseData.map(b => {
                   const saved = parsed[b.ic];
                   if (saved) {
                       return { ...b, ...saved }; // Restore completed status, verification type, etc.
@@ -119,10 +65,10 @@ const App: React.FC = () => {
               });
               setBeneficiaries(merged);
           } catch (e) {
-              setBeneficiaries(patchedData);
+              setBeneficiaries(baseData);
           }
       } else {
-          setBeneficiaries(patchedData);
+          setBeneficiaries(baseData);
       }
     }
   }, [selectedKampung]);
@@ -192,6 +138,9 @@ const App: React.FC = () => {
         break;
       case 'settings':
         // Return to previous logical step
+        setStep(previousStep);
+        break;
+      case 'history':
         setStep(previousStep);
         break;
       default:
@@ -315,6 +264,9 @@ const App: React.FC = () => {
             <div className="z-10 relative space-y-2">
                  {step !== 'login' && (
                     <>
+                        <button onClick={() => { setPreviousStep(step); setStep('history'); }} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'history' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
+                            <FileText size={18} /> History
+                        </button>
                         <button onClick={() => { setPreviousStep(step); setStep('settings'); }} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'settings' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
                             <Settings size={18} /> Settings
                         </button>
@@ -404,6 +356,7 @@ const App: React.FC = () => {
                       key="success"
                       beneficiary={selectedBeneficiary} 
                       onReset={() => setStep('dashboard')} 
+                      isOffline={isOffline}
                     />
                   )}
                   {step === 'settings' && (
@@ -411,6 +364,12 @@ const App: React.FC = () => {
                         key="settings"
                         isDevMode={isDevMode}
                         setIsDevMode={setIsDevMode}
+                        onBack={handleBack}
+                    />
+                  )}
+                  {step === 'history' && (
+                    <HistoryScreen
+                        key="history"
                         onBack={handleBack}
                     />
                   )}

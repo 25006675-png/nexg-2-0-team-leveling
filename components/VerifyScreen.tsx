@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, ChevronLeft, MapPin, Eye, Banknote, Calendar, Home, Building2 } from 'lucide-react';
+import { Save, ChevronLeft, MapPin, Eye, Banknote, Calendar, Home, Building2, WifiOff } from 'lucide-react';
 import { Beneficiary } from '../types';
+import { OfflineManager } from '../utils/OfflineManager';
 
 interface VerifyScreenProps {
   onVerified: (updatedBeneficiary: Beneficiary) => void;
@@ -11,13 +12,33 @@ interface VerifyScreenProps {
 
 const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, onBack }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   
   const totalPayout = beneficiary.monthlyPayout * beneficiary.pendingMonths;
 
   const handleSave = () => {
      setIsSaving(true);
+     
+     // Simulate processing
      setTimeout(() => {
-         onVerified({ ...beneficiary, status: 'Released' });
+         if (isOffline) {
+             // Offline Flow
+             OfflineManager.addToQueue(beneficiary);
+             alert("No Internet Connection.\n\nData has been encrypted and saved to the Secure Enclave. It will be uploaded automatically when connection is restored.");
+         }
+         
+         onVerified({ ...beneficiary, status: 'Verified' });
      }, 1500);
   };
 
@@ -88,7 +109,7 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
 
           <div className="bg-gov-50 rounded-xl p-5 border border-gov-100">
                <label className="text-[10px] font-bold text-gov-500 uppercase tracking-wider mb-3 block">
-                   Payment Calculation
+                   Pension Details
                </label>
                
                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -113,13 +134,13 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
                    </div>
 
                    <div className="p-4 flex justify-between items-center bg-green-50/50">
-                       <span className="text-sm font-bold text-gov-900">Total Payable</span>
+                       <span className="text-sm font-bold text-gov-900">Total Pension Value</span>
                        <span className="font-mono text-xl font-bold text-green-600">{formatCurrency(totalPayout)}</span>
                    </div>
                </div>
                
                <p className="text-[10px] text-gray-400 mt-3 text-center">
-                   System will auto-release full pending amount upon confirmation.
+                   System will log proof of life for this period.
                </p>
           </div>
       </div>
@@ -128,24 +149,38 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
          <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`w-full rounded-xl p-5 flex items-center justify-between shadow-[0_6px_0_0_#020617] transition-all group relative overflow-hidden ${
+            className={`w-full rounded-xl p-5 flex items-center justify-between transition-all group relative overflow-hidden ${
             !isSaving
-                ? 'bg-gov-900 text-white hover:shadow-[0_3px_0_0_#020617] hover:translate-y-[3px] active:shadow-none active:translate-y-[6px]' 
-                : 'bg-gray-800 text-gray-400 cursor-wait'
+                ? isOffline 
+                    ? 'bg-amber-600 text-white hover:shadow-[0_3px_0_0_#78350f] hover:translate-y-[3px] active:shadow-none active:translate-y-[6px] shadow-[0_6px_0_0_#78350f]'
+                    : 'bg-gov-900 text-white hover:shadow-[0_3px_0_0_#020617] hover:translate-y-[3px] active:shadow-none active:translate-y-[6px] shadow-[0_6px_0_0_#020617]' 
+                : 'bg-gray-800 text-gray-400 cursor-wait shadow-[0_6px_0_0_#1f2937]'
             }`}
         >
             <div className="text-left relative z-10">
                 <span className="block text-lg font-bold">
-                    {isSaving ? 'Processing...' : 'Release Full Pension'}
+                    {isSaving 
+                        ? (isOffline ? 'Encrypting...' : 'Processing...') 
+                        : (isOffline ? 'Save to Secure Enclave' : 'Confirm Proof of Life')
+                    }
                 </span>
-                <span className="text-xs text-blue-200">
-                     {isSaving ? 'Synchronizing...' : `Confirm Transfer of ${formatCurrency(totalPayout)}`}
+                <span className={`text-xs ${isOffline ? 'text-amber-100' : 'text-blue-200'}`}>
+                     {isSaving 
+                        ? 'Synchronizing...' 
+                        : (isOffline ? 'No Internet - Store & Forward' : `Verify Pension Value of ${formatCurrency(totalPayout)}`)
+                     }
                 </span>
             </div>
             <div className="p-3 rounded-xl bg-white/10">
-                <Save size={24} className={isSaving ? 'animate-bounce' : ''} />
+                {isOffline ? <WifiOff size={24} /> : <Save size={24} className={isSaving ? 'animate-bounce' : ''} />}
             </div>
         </button>
+        {isOffline && (
+            <p className="text-center text-xs text-amber-700 mt-3 font-medium flex items-center justify-center gap-1">
+                <WifiOff size={12} />
+                Offline Mode: Data will be stored locally
+            </p>
+        )}
       </div>
     </motion.div>
   );

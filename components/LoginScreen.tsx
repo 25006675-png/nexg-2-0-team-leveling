@@ -3,20 +3,13 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, ChevronRight, Loader2, MapPin, Building2, Lock, Eye, EyeOff } from 'lucide-react';
 import { Kampung } from '../types';
+import { KAMPUNGS } from '../utils/mockData';
 
 interface LoginScreenProps {
   onLogin: (kampung: Kampung) => void;
   agentId: string;
   setAgentId: (id: string) => void;
 }
-
-const KAMPUNGS: Kampung[] = [
-  { id: '1', name: 'Kampung Buayan, Penampang', state: 'Sabah', postcode: '89500', geography: 'DEEP_RURAL', lat: 5.7723, lng: 116.1922 },
-  { id: '2', name: 'Kg. Parit Jawa', state: 'Johor', postcode: '84000', geography: 'RURAL', lat: 1.95, lng: 102.63 },
-  { id: '3', name: 'Kg. Seberang Takir', state: 'Terengganu', postcode: '21300', geography: 'RURAL', lat: 5.34, lng: 103.13 },
-  { id: '4', name: 'Kg. Kinabatangan', state: 'Sabah', postcode: '90200', geography: 'DEEP_RURAL', lat: 5.42, lng: 117.98 },
-  { id: '5', name: 'Kg. Changkat Jering', state: 'Perak', postcode: '34850', geography: 'RURAL', lat: 4.79, lng: 100.72 },
-];
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId }) => {
   const [selectedKampungId, setSelectedKampungId] = useState<string>('');
