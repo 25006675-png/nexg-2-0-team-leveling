@@ -126,7 +126,7 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, ka
                             {beneficiary.verificationType && (
                                 <span className="text-[10px] font-bold px-2 py-1 rounded border flex items-center gap-1 bg-blue-100 text-blue-900 border-blue-200">
                                     {beneficiary.verificationType === 'HOME' ? <Home size={12} /> : <Building2 size={12}/>}
-                                    {beneficiary.verificationType === 'HOME' ? t.extra.homeVisit : t.extra.communityHall}
+                                    {beneficiary.verificationType === 'HOME' ? t.verification.homeVisit : t.verification.communityHall}
                                 </span>
                             )}
                         </div>
