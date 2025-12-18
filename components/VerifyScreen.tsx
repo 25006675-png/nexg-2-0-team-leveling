@@ -3,43 +3,66 @@ import { motion } from 'framer-motion';
 import { Save, ChevronLeft, MapPin, Eye, Banknote, Calendar, Home, Building2, WifiOff } from 'lucide-react';
 import { Beneficiary } from '../types';
 import { OfflineManager } from '../utils/OfflineManager';
+import AlertModal from './AlertModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface VerifyScreenProps {
   onVerified: (updatedBeneficiary: Beneficiary) => void;
   beneficiary: Beneficiary;
+  kampungId: string;
   onBack: () => void;
+  isOffline?: boolean;
 }
 
-const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, onBack }) => {
+const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, kampungId, onBack, isOffline: propIsOffline }) => {
+  const { t } = useLanguage();
   const [isSaving, setIsSaving] = useState(false);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [localIsOffline, setLocalIsOffline] = useState(!navigator.onLine);
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [pendingData, setPendingData] = useState<Beneficiary | null>(null);
+  
+  const isOffline = propIsOffline !== undefined ? propIsOffline : localIsOffline;
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+    if (propIsOffline !== undefined) return;
+
+    const handleOnline = () => setLocalIsOffline(false);
+    const handleOffline = () => setLocalIsOffline(true);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [propIsOffline]);
   
   const totalPayout = beneficiary.monthlyPayout * beneficiary.pendingMonths;
 
   const handleSave = () => {
      setIsSaving(true);
      
+     // Generate Unified Reference ID
+     const referenceId = OfflineManager.generateReferenceId(beneficiary.ic);
+     const updatedData: Beneficiary = { ...beneficiary, status: 'Verified', referenceId };
+
      // Simulate processing
      setTimeout(() => {
          if (isOffline) {
              // Offline Flow
-             OfflineManager.addToQueue(beneficiary);
-             alert("No Internet Connection.\n\nData has been encrypted and saved to the Secure Enclave. It will be uploaded automatically when connection is restored.");
+             OfflineManager.addToQueue(beneficiary, kampungId, referenceId);
+             setPendingData(updatedData);
+             setShowOfflineModal(true);
+         } else {
+             onVerified(updatedData);
          }
-         
-         onVerified({ ...beneficiary, status: 'Verified' });
      }, 1500);
+  };
+
+  const handleModalClose = () => {
+      setShowOfflineModal(false);
+      if (pendingData) {
+          onVerified(pendingData);
+      }
   };
 
   // Helper formatting currency
@@ -54,19 +77,28 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
       exit={{ opacity: 0, x: -20 }}
       className="h-full flex flex-col p-6 md:p-0"
     >
+      <AlertModal 
+        isOpen={showOfflineModal}
+        onClose={handleModalClose}
+        title={t.confirmation.offlineNoticeTitle}
+        message={t.confirmation.offlineNoticeDesc}
+        type="offline"
+        actionLabel={t.confirmation.understand}
+      />
+
       <div className="hidden md:flex mb-4">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-gov-900 transition-colors">
             <ChevronLeft size={20} />
-            <span className="text-sm font-medium">Back</span>
+            <span className="text-sm font-medium">{t.common.back}</span>
         </button>
       </div>
 
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gov-900">Service Confirmation</h2>
+        <h2 className="text-2xl font-bold text-gov-900">{t.confirmation.title}</h2>
         <div className="flex items-center gap-2 mt-2">
             <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-100 flex items-center gap-1">
                 <Eye size={10} />
-                Identity & Location Verified
+                {t.confirmation.verifiedBadge}
             </span>
         </div>
       </div>
@@ -89,12 +121,12 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
                                 ${beneficiary.geography === 'DEEP_RURAL' ? 'bg-purple-100 text-purple-900 border-purple-200' : 'bg-orange-100 text-orange-900 border-orange-200'}
                             `}>
                                 <MapPin size={12} />
-                                {beneficiary.geography.replace('_', ' ')}
+                                {beneficiary.geography === 'DEEP_RURAL' ? t.extra.deepRural : t.extra.rural}
                             </span>
                             {beneficiary.verificationType && (
                                 <span className="text-[10px] font-bold px-2 py-1 rounded border flex items-center gap-1 bg-blue-100 text-blue-900 border-blue-200">
                                     {beneficiary.verificationType === 'HOME' ? <Home size={12} /> : <Building2 size={12}/>}
-                                    {beneficiary.verificationType === 'HOME' ? 'Home Visit' : 'Community Hall'}
+                                    {beneficiary.verificationType === 'HOME' ? t.extra.homeVisit : t.extra.communityHall}
                                 </span>
                             )}
                         </div>
@@ -109,7 +141,7 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
 
           <div className="bg-gov-50 rounded-xl p-5 border border-gov-100">
                <label className="text-[10px] font-bold text-gov-500 uppercase tracking-wider mb-3 block">
-                   Pension Details
+                   {t.extra.pensionDetails}
                </label>
                
                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -118,7 +150,7 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
                            <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
                                <Banknote size={18} />
                            </div>
-                           <span className="text-sm font-medium text-gray-600">Monthly Rate</span>
+                           <span className="text-sm font-medium text-gray-600">{t.confirmation.monthlyPayout}</span>
                        </div>
                        <span className="font-mono font-semibold text-gray-900">{formatCurrency(beneficiary.monthlyPayout)}</span>
                    </div>
@@ -128,19 +160,19 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
                            <div className="bg-orange-50 p-2 rounded-lg text-orange-600">
                                <Calendar size={18} />
                            </div>
-                           <span className="text-sm font-medium text-gray-600">Pending Months</span>
+                           <span className="text-sm font-medium text-gray-600">{t.confirmation.pendingMonths}</span>
                        </div>
                        <span className="font-mono font-semibold text-gray-900">x {beneficiary.pendingMonths}</span>
                    </div>
 
                    <div className="p-4 flex justify-between items-center bg-green-50/50">
-                       <span className="text-sm font-bold text-gov-900">Total Pension Value</span>
+                       <span className="text-sm font-bold text-gov-900">{t.confirmation.totalPayout}</span>
                        <span className="font-mono text-xl font-bold text-green-600">{formatCurrency(totalPayout)}</span>
                    </div>
                </div>
                
                <p className="text-[10px] text-gray-400 mt-3 text-center">
-                   System will log proof of life for this period.
+                   {t.extra.proofOfLife}
                </p>
           </div>
       </div>
@@ -160,14 +192,14 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
             <div className="text-left relative z-10">
                 <span className="block text-lg font-bold">
                     {isSaving 
-                        ? (isOffline ? 'Encrypting...' : 'Processing...') 
-                        : (isOffline ? 'Save to Secure Enclave' : 'Confirm Proof of Life')
+                        ? (isOffline ? t.extra.encrypting : t.confirmation.processing) 
+                        : (isOffline ? t.extra.saveEnclave : t.confirmation.confirmSubmit)
                     }
                 </span>
                 <span className={`text-xs ${isOffline ? 'text-amber-100' : 'text-blue-200'}`}>
                      {isSaving 
-                        ? 'Synchronizing...' 
-                        : (isOffline ? 'No Internet - Store & Forward' : `Verify Pension Value of ${formatCurrency(totalPayout)}`)
+                        ? t.extra.synchronizing 
+                        : (isOffline ? t.extra.storeForward : t.extra.verifyValue.replace('{value}', formatCurrency(totalPayout)))
                      }
                 </span>
             </div>
@@ -178,7 +210,7 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, on
         {isOffline && (
             <p className="text-center text-xs text-amber-700 mt-3 font-medium flex items-center justify-center gap-1">
                 <WifiOff size={12} />
-                Offline Mode: Data will be stored locally
+                {t.extra.offlineDataStored}
             </p>
         )}
       </div>

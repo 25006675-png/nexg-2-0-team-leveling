@@ -1,8 +1,10 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { RefreshCw, CheckCircle2, MapPin, CreditCard, ArrowDown, Users, AlertCircle, Wifi, WifiOff, CloudUpload, Home, Building2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { RefreshCw, CheckCircle2, MapPin, CreditCard, ArrowDown, Users, AlertCircle, Wifi, WifiOff, CloudUpload, Home, Building2, X, AlertTriangle } from 'lucide-react';
 import { Beneficiary, Kampung } from '../types';
 import { OfflineManager } from '../utils/OfflineManager';
+import AlertModal from './AlertModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface DashboardScreenProps {
   onSelectBeneficiary: (beneficiary: Beneficiary) => void;
@@ -12,6 +14,7 @@ interface DashboardScreenProps {
   isOffline: boolean;
   setIsOffline: (offline: boolean) => void;
   onSync: () => void;
+  allowManualOfflineToggle?: boolean;
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
@@ -21,11 +24,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   kampung,
   isOffline,
   setIsOffline,
-  onSync
+  onSync,
+  allowManualOfflineToggle = false
 }) => {
+  const { t } = useLanguage();
   const [isSyncing, setIsSyncing] = useState(false);
-  const [showSyncSuccess, setShowSyncSuccess] = useState(false);
-
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+  
   // Note: Network detection is handled globally in page.tsx and passed via isOffline prop
 
   const handleManualSync = () => {
@@ -37,9 +43,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
           
           onSync(); // Trigger parent sync logic
           setIsSyncing(false);
-          setShowSyncSuccess(true);
-          alert(`Batch Sync Complete.\n\n${queue.length} Records uploaded to KWAP.`);
-          setTimeout(() => setShowSyncSuccess(false), 3000);
+          setSyncMessage(t.extra.syncComplete.replace('{count}', queue.length.toString()));
+          setShowSyncModal(true);
       }, 2000);
   };
 
@@ -59,17 +64,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       exit={{ opacity: 0, x: -20 }}
       className="h-full flex flex-col p-6 md:p-0"
     >
-      {showSyncSuccess && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg z-50 flex items-center gap-2"
-          >
-              <CheckCircle2 size={20} />
-              <span className="font-bold text-sm">Data Synced Successfully</span>
-          </motion.div>
-      )}
+      <AlertModal 
+        isOpen={showSyncModal}
+        onClose={() => setShowSyncModal(false)}
+        title={t.extra.syncSuccess}
+        message={syncMessage}
+        type="success"
+        actionLabel={t.extra.ok}
+      />
 
       <div className="mb-6 shrink-0 bg-gov-50 p-4 rounded-xl border border-gov-100">
           <div className="flex justify-between items-start mb-4">
@@ -84,7 +86,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         ? 'bg-purple-100 text-purple-900 border-purple-200' 
                         : 'bg-orange-100 text-orange-900 border-orange-200'
                     }`}>
-                        {kampung.geography === 'DEEP_RURAL' ? 'Deep Rural' : 'Rural'} Area
+                        {kampung.geography === 'DEEP_RURAL' ? t.extra.deepRural : t.extra.rural} {t.extra.area}
                     </div>
                 </div>
             </div>
@@ -100,10 +102,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
                 {/* Network Status Indicator */}
                 <div 
-                    className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${isOffline ? 'bg-red-100 border-red-200 text-red-600' : 'bg-green-100 border-green-200 text-green-700'}`}
+                    onClick={() => allowManualOfflineToggle && setIsOffline(!isOffline)}
+                    className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${isOffline ? 'bg-red-100 border-red-200 text-red-600' : 'bg-green-100 border-green-200 text-green-700'} ${allowManualOfflineToggle ? 'cursor-pointer hover:opacity-80' : ''}`}
                 >
                     {isOffline ? <WifiOff size={16} /> : <Wifi size={16} />}
-                    <span className="text-[10px] font-bold mt-1 uppercase">{isOffline ? 'Offline' : 'Online'}</span>
+                    <span className="text-[10px] font-bold mt-1 uppercase">{isOffline ? t.common.offline : t.common.online}</span>
                 </div>
             </div>
           </div>
@@ -117,7 +120,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
               >
                   <div className="flex items-center gap-2">
                       <CloudUpload size={16} className="text-blue-600" />
-                      <span className="text-xs font-bold text-blue-800">{pendingSyncList.length} records pending sync</span>
+                      <span className="text-xs font-bold text-blue-800">{pendingSyncList.length} {t.dashboard.syncNeeded}</span>
                   </div>
                   <button 
                     onClick={handleManualSync}
@@ -125,7 +128,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
                       {isSyncing ? <RefreshCw size={12} className="animate-spin" /> : null}
-                      {isSyncing ? 'Syncing...' : 'Sync Now'}
+                      {isSyncing ? t.common.loading : t.dashboard.syncData}
                   </button>
               </motion.div>
           )}
@@ -134,14 +137,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
               <div className="bg-gray-200 border border-gray-300 rounded-lg p-3 flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">
                       <CloudUpload size={16} className="text-gray-500" />
-                      <span className="text-xs font-bold text-gray-600">{pendingSyncList.length} saved locally</span>
+                      <span className="text-xs font-bold text-gray-600">{pendingSyncList.length} {t.extra.savedLocally}</span>
                   </div>
-                  <span className="text-[10px] font-bold text-gray-500 uppercase">Waiting for network</span>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase">{t.history.pendingUpload}</span>
               </div>
           )}
 
           <p className="text-sm text-gray-600">
-              Eligible Recipients: <strong className="text-gov-900">{pendingList.length}</strong>
+              {t.dashboard.title}: <strong className="text-gov-900">{pendingList.length}</strong>
           </p>
       </div>
 
@@ -152,8 +155,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 shadow-sm">
                           <Users size={32} />
                       </div>
-                      <h3 className="font-bold text-xl text-green-900">No Pending Cases</h3>
-                      <p className="text-sm text-green-700 mt-2">There are no eligible citizens in this area currently.</p>
+                      <h3 className="font-bold text-xl text-green-900">{t.dashboard.noBeneficiaries}</h3>
+                      <p className="text-sm text-green-700 mt-2">{t.extra.noBeneficiariesDesc}</p>
                   </div>
               ) : (
                   pendingList.map((b) => (
@@ -181,10 +184,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                                   </div>
 
                                   <div className="mt-3 flex items-center gap-2">
-                                     <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Status</span>
+                                     <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">{t.extra.status}</span>
                                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 flex items-center gap-1">
                                          <AlertCircle size={10} />
-                                         Pending Verification
+                                         {t.dashboard.filterPending}
                                      </span>
                                   </div>
                               </div>
@@ -196,7 +199,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                                   {b.ic}
                               </div>
                               <div className="flex items-center gap-1 text-xs font-bold text-gov-800 group-hover:text-blue-600">
-                                  Verify Identity
+                                  {t.verification.title}
                                   <ArrowDown size={12} className="-rotate-90"/>
                               </div>
                           </div>
@@ -209,7 +212,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   <div className="pt-6">
                        <div className="flex items-center gap-3 mb-4">
                           <div className="h-px bg-gray-200 flex-1"></div>
-                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Completed</span>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t.dashboard.filterVerified}</span>
                           <div className="h-px bg-gray-200 flex-1"></div>
                       </div>
                       {completedList.map((b) => (
@@ -226,22 +229,22 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                                        <div className="flex items-center gap-2 mt-1">
                                            {b.verificationType === 'HOME' && (
                                                 <span className="flex items-center gap-1 text-[9px] font-bold text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">
-                                                    <Home size={10} /> Home
+                                                    <Home size={10} /> {t.extra.home}
                                                 </span>
                                            )}
                                            {b.verificationType === 'HALL' && (
                                                 <span className="flex items-center gap-1 text-[9px] font-bold text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">
-                                                    <Building2 size={10} /> Hall
+                                                    <Building2 size={10} /> {t.extra.hall}
                                                 </span>
                                            )}
                                             {b.syncStatus === 'pending' && (
                                                 <span className="flex items-center gap-1 text-[9px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-200">
-                                                    <CloudUpload size={10} /> Unsynced
+                                                    <CloudUpload size={10} /> {t.common.pending}
                                                 </span>
                                             )}
                                        </div>
                                    </div>
-                                   <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-1 rounded">Paid</span>
+                                   <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-1 rounded">{t.common.success}</span>
                                </div>
                           </div>
                       ))}
@@ -255,7 +258,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   className="inline-flex items-center gap-2 text-[10px] font-bold text-gray-300 hover:text-gray-500 uppercase tracking-widest transition-colors"
                >
                    <RefreshCw size={12} />
-                   Reset Database
+                   {t.dashboard.resetDb}
                </button>
           </div>
       </div>

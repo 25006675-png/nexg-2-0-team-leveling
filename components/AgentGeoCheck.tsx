@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Kampung } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AgentGeoCheckProps {
   kampung: Kampung;
@@ -12,6 +13,7 @@ interface AgentGeoCheckProps {
 type GeoStatus = 'IDLE' | 'SEARCHING' | 'FOUND' | 'VERIFYING' | 'SUCCESS' | 'FAILED';
 
 const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDevMode }) => {
+  const { t } = useLanguage();
   const [status, setStatus] = useState<GeoStatus>('IDLE');
   const [distance, setDistance] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
@@ -39,7 +41,7 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
     setDistance(null);
 
     if (!navigator.geolocation) {
-      setErrorMsg('Geolocation is not supported by your browser');
+      setErrorMsg(t.extra.geoNotSupported);
       setStatus('FAILED');
       return;
     }
@@ -77,7 +79,7 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
              }, 1000);
           } else {
              setStatus('FAILED');
-             setErrorMsg(`You are ${Math.round(dist)}m away. Must be within 500m.`);
+             setErrorMsg(`${t.geo.outsideZone} (${Math.round(dist)}m)`);
           }
         }, 1500);
     };
@@ -104,16 +106,16 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
             return;
         }
 
-        let msg = 'Unable to retrieve your location.';
+        let msg = t.extra.unableRetrieveLoc;
         switch(error.code) {
             case error.PERMISSION_DENIED:
-                msg = 'Location permission denied. Please enable it in your browser settings.';
+                msg = t.extra.locPermissionDenied;
                 break;
             case error.POSITION_UNAVAILABLE:
-                msg = 'Location information is unavailable.';
+                msg = t.extra.locUnavailable;
                 break;
             case error.TIMEOUT:
-                msg = 'The request to get user location timed out.';
+                msg = t.extra.locTimeout;
                 break;
         }
         setErrorMsg(msg);
@@ -183,33 +185,33 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
 
          <div className="space-y-4 mb-8">
              <h2 className="text-2xl font-bold text-gov-900">
-                 {status === 'IDLE' && 'Verify Location'}
-                 {status === 'SEARCHING' && 'Locating Agent...'}
-                 {status === 'FOUND' && 'GPS Signal Locked'}
-                 {status === 'VERIFYING' && 'Verifying Zone...'}
-                 {status === 'SUCCESS' && 'Access Granted'}
-                 {status === 'FAILED' && 'Access Denied'}
+                 {status === 'IDLE' && t.geo.zoneCheck}
+                 {status === 'SEARCHING' && t.geo.verifying}
+                 {status === 'FOUND' && t.geo.verifying}
+                 {status === 'VERIFYING' && t.geo.verifying}
+                 {status === 'SUCCESS' && t.geo.success}
+                 {status === 'FAILED' && t.geo.failure}
              </h2>
 
              <p className="text-gray-500 text-sm">
-                 {status === 'IDLE' && 'Please verify your location to proceed.'}
-                 {status === 'SEARCHING' && 'Please stand still while we acquire your position.'}
-                 {status === 'FOUND' && 'Comparing location with registered Kampung boundary.'}
-                 {status === 'VERIFYING' && `Ensuring you are physically present in ${kampung.name}.`}
-                 {status === 'SUCCESS' && 'You are within the authorized zone.'}
-                 {status === 'FAILED' && (errorMsg || 'You are outside the authorized zone.')}
+                 {status === 'IDLE' && t.geo.zoneCheck}
+                 {status === 'SEARCHING' && t.geo.verifying}
+                 {status === 'FOUND' && t.geo.verifying}
+                 {status === 'VERIFYING' && t.geo.verifying}
+                 {status === 'SUCCESS' && t.geo.withinZone}
+                 {status === 'FAILED' && (errorMsg || t.geo.outsideZone)}
              </p>
 
              {/* Coordinate Display */}
              {(status === 'VERIFYING' || status === 'SUCCESS' || status === 'FAILED') && userLocation && (
                  <div className="flex justify-center gap-3 w-full py-2">
                     <div className="bg-blue-900 text-white text-xs font-mono px-4 py-3 rounded-xl shadow-md text-center flex-1">
-                        <span className="text-blue-300 text-xs uppercase block mb-1 font-bold tracking-wider">Target Zone</span>
+                        <span className="text-blue-300 text-xs uppercase block mb-1 font-bold tracking-wider">{t.extra.targetZone}</span>
                         <div className="font-bold text-sm">{Math.abs(kampung.lat).toFixed(5)}° {kampung.lat >= 0 ? 'N' : 'S'}</div>
                         <div className="font-bold text-sm">{Math.abs(kampung.lng).toFixed(5)}° {kampung.lng >= 0 ? 'E' : 'W'}</div>
                     </div>
                     <div className="bg-white border-2 border-gray-100 text-gray-700 text-xs font-mono px-4 py-3 rounded-xl shadow-md text-center flex-1">
-                        <span className="text-gray-400 text-xs uppercase block mb-1 font-bold tracking-wider">You {isDevMode && '(DEV)'}</span>
+                        <span className="text-gray-400 text-xs uppercase block mb-1 font-bold tracking-wider">{t.extra.you} {isDevMode && `(${t.geo.bypass})`}</span>
                         <div className="font-bold text-sm">{Math.abs(userLocation.lat).toFixed(5)}° {userLocation.lat >= 0 ? 'N' : 'S'}</div>
                         <div className="font-bold text-sm">{Math.abs(userLocation.lng).toFixed(5)}° {userLocation.lng >= 0 ? 'E' : 'W'}</div>
                     </div>
@@ -220,12 +222,12 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
          {/* Status Indicators */}
          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col gap-3">
              <div className="flex justify-between items-center text-sm">
-                 <span className="text-gray-500">Target Zone</span>
+                 <span className="text-gray-500">{t.extra.targetZone}</span>
                  <span className="font-bold text-gov-900">{kampung.name}</span>
              </div>
              <div className="h-px bg-gray-200 w-full" />
              <div className="flex justify-between items-center text-sm">
-                 <span className="text-gray-500">Distance to Center</span>
+                 <span className="text-gray-500">{t.geo.distance}</span>
                  <span className={`font-mono font-bold ${
                      status === 'SUCCESS' ? 'text-green-600' : 
                      status === 'FAILED' ? 'text-red-600' : 
@@ -235,13 +237,13 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
                  </span>
              </div>
              <div className="flex justify-between items-center text-sm">
-                 <span className="text-gray-500">Geo-Fence Status</span>
+                 <span className="text-gray-500">{t.extra.geoFenceStatus}</span>
                  <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider ${
                      status === 'SUCCESS' ? 'bg-green-100 text-green-700' : 
                      status === 'FAILED' ? 'bg-red-100 text-red-700' :
                      'bg-gray-200 text-gray-500'
                  }`}>
-                     {status === 'SUCCESS' ? 'INSIDE' : status === 'FAILED' ? 'OUTSIDE' : 'CHECKING'}
+                     {status === 'SUCCESS' ? t.extra.inside : status === 'FAILED' ? t.extra.outside : t.extra.checking}
                  </span>
              </div>
          </div>
@@ -251,7 +253,7 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
                 onClick={startVerification}
                 className="mt-6 w-full py-3 bg-gov-900 text-white rounded-xl font-bold shadow-lg hover:bg-blue-800 transition-all"
              >
-                 Start Verification
+                 {t.geo.zoneCheck}
              </button>
          )}
 
@@ -261,7 +263,7 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
                 className="mt-6 w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2"
              >
                  <CheckCircle2 size={20} />
-                 Proceed to Dashboard
+                 {t.geo.proceed}
              </button>
          )}
 
@@ -270,7 +272,7 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
                 onClick={startVerification}
                 className="mt-6 w-full py-3 bg-gov-900 text-white rounded-xl font-bold shadow-lg hover:bg-blue-800 transition-all"
              >
-                 Retry Verification
+                 {t.geo.retry}
              </button>
          )}
       </div>

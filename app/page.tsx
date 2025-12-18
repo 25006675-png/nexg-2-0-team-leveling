@@ -13,10 +13,13 @@ import SettingsScreen from '../components/SettingsScreen';
 import HistoryScreen from '../components/HistoryScreen';
 import { Beneficiary, Kampung, VerificationType } from '../types';
 import { BENEFICIARIES_BY_KAMPUNG } from '../utils/mockData';
+import { OfflineManager } from '../utils/OfflineManager';
+import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 
 export type Step = 'login' | 'geo_check' | 'dashboard' | 'verification' | 'confirmation' | 'success' | 'settings' | 'history';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { t } = useLanguage();
   const [step, setStep] = useState<Step>('login');
   const [agentId, setAgentId] = useState('KK-0012-P');
   const [selectedKampung, setSelectedKampung] = useState<Kampung | null>(null);
@@ -24,6 +27,7 @@ const App: React.FC = () => {
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [isDevMode, setIsDevMode] = useState(false);
+  const [allowManualOfflineToggle, setAllowManualOfflineToggle] = useState(false);
   const [previousStep, setPreviousStep] = useState<Step>('login');
 
   // Global Network Detection
@@ -83,7 +87,8 @@ const App: React.FC = () => {
           completed: b.completed,
           status: b.status,
           verificationType: b.verificationType,
-          syncStatus: b.syncStatus
+          syncStatus: b.syncStatus,
+          referenceId: b.referenceId
       };
       
       localStorage.setItem('pencen_app_data', JSON.stringify(parsed));
@@ -173,6 +178,16 @@ const App: React.FC = () => {
     ));
     
     saveBeneficiaryToStorage(finalBeneficiary);
+
+    // If online, add directly to history log
+    if (!isOffline && selectedKampung) {
+        OfflineManager.addOnlineVerificationToHistory(
+            finalBeneficiary, 
+            selectedKampung.id, 
+            finalBeneficiary.referenceId || OfflineManager.generateReferenceId(finalBeneficiary.ic)
+        );
+    }
+
     setSelectedBeneficiary(finalBeneficiary);
     setStep('success');
   };
@@ -180,7 +195,8 @@ const App: React.FC = () => {
   const handleResetDatabase = () => {
      localStorage.removeItem('pencen_app_data');
      if (selectedKampung) {
-        const patchedData = RAW_DATA.map((b, index) => ({
+        const baseData = BENEFICIARIES_BY_KAMPUNG[selectedKampung.id] || [];
+        const patchedData = baseData.map((b, index) => ({
             ...b,
             geography: selectedKampung.geography,
             address: `No. ${10 + index * 5}, Jalan Utama, ${selectedKampung.name}, ${selectedKampung.postcode} ${selectedKampung.state}`,
@@ -194,13 +210,23 @@ const App: React.FC = () => {
 
   const steps: Step[] = ['login', 'geo_check', 'dashboard', 'verification', 'confirmation', 'success'];
   const stepLabels = {
-    login: 'Login',
-    geo_check: 'Zone Check',
-    dashboard: 'Eligible Citizens',
-    verification: 'Identity Check',
-    confirmation: 'Confirm',
-    success: 'Done',
-    settings: 'Settings'
+    login: t.steps.login,
+    geo_check: t.steps.geo_check,
+    dashboard: t.steps.dashboard,
+    verification: t.steps.verification,
+    confirmation: t.steps.confirmation,
+    success: t.steps.success,
+    settings: t.steps.settings,
+    history: t.steps.history
+  };
+
+  const handleNavToAux = (target: Step) => {
+      // Only update previous step if we're not already in an auxiliary screen
+      // This prevents getting stuck in a loop between Settings and History
+      if (step !== 'settings' && step !== 'history') {
+          setPreviousStep(step);
+      }
+      setStep(target);
   };
 
   return (
@@ -224,7 +250,7 @@ const App: React.FC = () => {
                 {step !== 'login' && (
                   <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
                       <div className="bg-white/10 rounded-xl p-5 border border-white/5 backdrop-blur-sm">
-                          <p className="text-[10px] text-blue-200 uppercase tracking-widest font-bold mb-1">Ketua ID</p>
+                          <p className="text-[10px] text-blue-200 uppercase tracking-widest font-bold mb-1">{t.login.ketuaId}</p>
                           <p className="font-mono text-xl font-semibold tracking-wide">{agentId}</p>
                           {selectedKampung && (
                              <div className="mt-3 pt-3 border-t border-white/10 flex items-start gap-2 text-sm text-gray-300">
@@ -264,14 +290,14 @@ const App: React.FC = () => {
             <div className="z-10 relative space-y-2">
                  {step !== 'login' && (
                     <>
-                        <button onClick={() => { setPreviousStep(step); setStep('history'); }} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'history' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
-                            <FileText size={18} /> History
+                        <button onClick={() => handleNavToAux('history')} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'history' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
+                            <FileText size={18} /> {t.common.history}
                         </button>
-                        <button onClick={() => { setPreviousStep(step); setStep('settings'); }} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'settings' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
-                            <Settings size={18} /> Settings
+                        <button onClick={() => handleNavToAux('settings')} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'settings' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
+                            <Settings size={18} /> {t.common.settings}
                         </button>
                         <button onClick={handleLogout} className="flex items-center gap-3 text-sm font-medium text-red-300 hover:text-white hover:bg-red-500/20 w-full p-3 rounded-lg transition-all">
-                            <LogOut size={18} /> Exit Access
+                            <LogOut size={18} /> {t.common.exitAccess}
                         </button>
                     </>
                  )}
@@ -333,22 +359,26 @@ const App: React.FC = () => {
                       isOffline={isOffline}
                       setIsOffline={setIsOffline}
                       onSync={handleSyncData}
+                      allowManualOfflineToggle={allowManualOfflineToggle}
                     />
                   )}
                   {step === 'verification' && selectedBeneficiary && (
                     <VerificationScreen 
                       key="verification"
-                      beneficiary={selectedBeneficiary} 
+                      beneficiary={selectedBeneficiary}
+                      beneficiaries={beneficiaries}
                       onScanComplete={handleVerificationComplete} 
                       onBack={handleBack}
                     />
                   )}
-                  {step === 'confirmation' && selectedBeneficiary && (
+                  {step === 'confirmation' && selectedBeneficiary && selectedKampung && (
                     <ConfirmationScreen 
                       key="confirmation" 
                       beneficiary={selectedBeneficiary}
+                      kampungId={selectedKampung.id}
                       onVerified={handleConfirmationComplete} 
                       onBack={handleBack}
+                      isOffline={isOffline}
                     />
                   )}
                   {step === 'success' && selectedBeneficiary && (
@@ -364,12 +394,15 @@ const App: React.FC = () => {
                         key="settings"
                         isDevMode={isDevMode}
                         setIsDevMode={setIsDevMode}
+                        allowManualOfflineToggle={allowManualOfflineToggle}
+                        setAllowManualOfflineToggle={setAllowManualOfflineToggle}
                         onBack={handleBack}
                     />
                   )}
-                  {step === 'history' && (
+                  {step === 'history' && selectedKampung && (
                     <HistoryScreen
                         key="history"
+                        kampungId={selectedKampung.id}
                         onBack={handleBack}
                     />
                   )}
@@ -378,11 +411,19 @@ const App: React.FC = () => {
           </div>
 
           <div className="py-4 bg-white/50 md:bg-transparent text-center text-[10px] text-gray-400 border-t border-gray-100 md:border-none shrink-0 font-mono uppercase tracking-widest">
-            Ketua Kampung Access v3.0
+            {t.common.version}
           </div>
         </div>
       </div>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 };
 

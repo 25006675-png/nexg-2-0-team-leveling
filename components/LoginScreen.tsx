@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Shield, ChevronRight, Loader2, MapPin, Building2, Lock, Eye, EyeOff } from 'lucide-react';
 import { Kampung } from '../types';
 import { KAMPUNGS } from '../utils/mockData';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface LoginScreenProps {
   onLogin: (kampung: Kampung) => void;
@@ -12,6 +13,7 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId }) => {
+  const { t } = useLanguage();
   const [selectedKampungId, setSelectedKampungId] = useState<string>('');
   const [password, setPassword] = useState('pension123');
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +27,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId 
     if (!selectedKampungId || !password) return;
 
     if (password !== 'pension123') {
-        setError('Invalid password provided.');
+        setError(t.extra.invalidPassword);
         return;
     }
 
@@ -56,21 +58,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId 
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gov-900">MyDigital Kampung</h2>
-            <p className="text-sm text-gray-500 mt-1">Ketua Kampung Portal</p>
+            <p className="text-sm text-gray-500 mt-1">{t.extra.portal}</p>
           </div>
         </div>
 
         {/* Tablet Header */}
         <div className="hidden md:block mb-8">
-            <h2 className="text-2xl font-bold text-gov-900">Ketua Access</h2>
-            <p className="text-gray-500 mt-1">Secure login for authorized personnel only.</p>
+            <h2 className="text-2xl font-bold text-gov-900">{t.login.welcome}</h2>
+            <p className="text-gray-500 mt-1">{t.login.secureAccess}</p>
         </div>
 
         {/* Form Section */}
         <form onSubmit={handleLogin} className="space-y-5 mt-8">
           <div className="space-y-1">
             <label className="text-xs font-bold text-gov-900 uppercase tracking-wide ml-1">
-              Ketua ID
+              {t.login.ketuaId}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -88,7 +90,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId 
 
           <div className="space-y-1">
             <label className="text-xs font-bold text-gov-900 uppercase tracking-wide ml-1">
-              Select Kampung
+              {t.login.selectKampung}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -99,7 +101,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId 
                 onChange={(e) => setSelectedKampungId(e.target.value)}
                 className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-0 focus:border-gov-900 transition-all appearance-none font-bold text-lg truncate pr-8"
               >
-                <option value="" disabled>Select Location</option>
+                <option value="" disabled>{t.login.selectKampung}</option>
                 {KAMPUNGS.map((k) => (
                   <option key={k.id} value={k.id}>
                     {k.name}, {k.state}
@@ -112,14 +114,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId 
             </div>
             {selectedKampungId && (
                 <p className="text-xs text-blue-600 font-medium ml-1 pt-1 flex items-center gap-1">
-                    <CheckIcon /> Zone Coverage Active
+                    <CheckIcon /> {t.extra.zoneActive}
                 </p>
             )}
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-bold text-gov-900 uppercase tracking-wide ml-1">
-              Passkey
+              {t.extra.passkey}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -159,11 +161,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId 
             {isLoading ? (
               <>
                 <Loader2 className="animate-spin -ml-1 mr-3 h-6 w-6" />
-                Authenticating...
+                {t.common.loading}
               </>
             ) : (
               <>
-                Access System
+                {t.login.login}
                 <ChevronRight className="ml-2 h-5 w-5" />
               </>
             )}
@@ -172,8 +174,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId 
 
         <div className="pt-4 text-center">
           <p className="text-xs text-gray-400">
-            Authorized for Ketua Kampung use only. <br/>
-            GPS Location will be logged.
+            {t.extra.authorizedOnly} <br/>
+            {t.extra.gpsLogged}
           </p>
         </div>
       </div>

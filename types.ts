@@ -26,4 +26,5 @@ export type Beneficiary = {
   completed?: boolean;
   verificationType?: VerificationType;
   syncStatus?: SyncStatus;
+  referenceId?: string;
 };

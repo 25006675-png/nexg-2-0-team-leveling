@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check, Download, Share2, ArrowRight, Shield, Lock, WifiOff } from 'lucide-react';
 import { Beneficiary } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SuccessScreenProps {
   onReset: () => void;
@@ -10,6 +11,7 @@ interface SuccessScreenProps {
 }
 
 const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isOffline }) => {
+  const { t, language } = useLanguage();
   const totalPayout = beneficiary.monthlyPayout * beneficiary.pendingMonths;
 
   // Helper formatting currency
@@ -45,24 +47,24 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
 
           <div className="text-center md:text-left mt-6 md:mt-0">
               <h2 className={`text-2xl font-bold ${isOffline ? 'text-amber-900' : 'text-gov-900'}`}>
-                  {isOffline ? 'Proof of Life Captured' : 'Verification Successful'}
-                  <br/>{isOffline ? 'Securely Stored' : ''}
+                  {isOffline ? t.success.proofCaptured : t.success.verificationSuccessful}
+                  <br/>{isOffline ? t.success.securelyStored : ''}
               </h2>
               <p className="text-gray-500 text-sm mt-2 max-w-xs md:max-w-none">
                 {isOffline 
-                    ? "Data encrypted and saved to Secure Enclave. Connect to Internet to finalize upload." 
-                    : "Proof of Life accepted by KWAP. Pension Status: ACTIVE."}
+                    ? t.success.offlineDesc
+                    : t.success.onlineDesc}
               </p>
               {isOffline && (
                   <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200">
                       <WifiOff size={12} />
-                      STATUS: QUEUED FOR UPLOAD
+                      {t.success.statusQueued}
                   </div>
               )}
               {!isOffline && (
                   <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-bold border border-green-200">
                       <Check size={12} />
-                      STATUS: CLOUD SYNCED
+                      {t.success.statusSynced}
                   </div>
               )}
           </div>
@@ -77,14 +79,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
          
          <div className="p-8 space-y-6">
             <div className="flex justify-between items-center pb-6 border-b-2 border-gray-100 border-dashed">
-              <span className="text-sm text-gray-500 uppercase font-bold tracking-wider">{isOffline ? 'Offline Token' : 'Verification ID'}</span>
+              <span className="text-sm text-gray-500 uppercase font-bold tracking-wider">{t.success.verificationId}</span>
               <span className="text-base font-mono font-bold text-gov-900">
-                  {isOffline ? `AES:${Math.random().toString(36).substring(2, 8).toUpperCase()}...` : `TXN-${Math.floor(Math.random() * 10000)}-XJ2`}
+                  {beneficiary.referenceId || t.extra.pendingGen}
               </span>
             </div>
             
             <div className="flex justify-between items-center">
-               <span className="text-sm text-gray-500 font-medium">Beneficiary</span>
+               <span className="text-sm text-gray-500 font-medium">{t.success.beneficiary}</span>
                <div className="text-right">
                   <span className="text-base font-bold text-gov-900 block">{beneficiary.name}</span>
                   <span className="text-xs text-gray-400 font-mono">{beneficiary.ic}</span>
@@ -92,13 +94,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
             </div>
 
             <div className="flex justify-between items-center">
-               <span className="text-sm text-gray-500 font-medium">Date & Time</span>
-               <span className="text-sm font-bold text-gov-900 text-right">{new Date().toLocaleDateString()} <br/> {new Date().toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' })}</span>
+               <span className="text-sm text-gray-500 font-medium">{t.success.dateTime}</span>
+               <span className="text-sm font-bold text-gov-900 text-right">{new Date().toLocaleDateString(language === 'ms' ? 'ms-MY' : 'en-US')} <br/> {new Date().toLocaleTimeString(language === 'ms' ? 'ms-MY' : 'en-US', { hour: '2-digit', minute:'2-digit' })}</span>
             </div>
             
              <div className="flex justify-between items-center pt-6 border-t-2 border-gray-100">
                <span className="text-base font-bold text-gov-900">
-                   Pension Amount
+                   {t.success.pensionAmount}
                </span>
                <span className={`text-xl font-black ${isOffline ? 'text-amber-600' : 'text-green-600'}`}>
                    {formatCurrency(totalPayout)}
@@ -110,11 +112,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
          <div className="bg-gray-50 px-8 py-4 flex gap-4 border-t border-gray-100">
             <button className="flex-1 flex items-center justify-center gap-2 text-sm font-bold text-gov-700 py-3 rounded-xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-200">
                <Download size={16} />
-               Save
+               {t.success.save}
             </button>
             <button className="flex-1 flex items-center justify-center gap-2 text-sm font-bold text-gov-700 py-3 rounded-xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-gray-200">
                <Share2 size={16} />
-               Share
+               {t.success.share}
             </button>
          </div>
       </div>
@@ -125,7 +127,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
           onClick={onReset}
           className="w-full py-6 text-xl bg-gov-900 text-white rounded-xl font-bold shadow-[0_6px_0_0_#020617] hover:shadow-[0_3px_0_0_#020617] hover:translate-y-[3px] active:shadow-none active:translate-y-[6px] transition-all flex items-center justify-center gap-3"
         >
-          Next Verification
+          {t.success.nextVerification}
           <ArrowRight size={24} />
         </button>
       </div>

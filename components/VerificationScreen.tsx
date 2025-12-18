@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Cpu, ChevronLeft, CheckCircle2, Fingerprint, MapPin, AlertCircle, UserX, Home, AlertTriangle, ScanLine, Radar, Satellite, Check, Building2, Users } from 'lucide-react';
 import { Beneficiary, VerificationType } from '../types';
 
+import { useLanguage } from '../contexts/LanguageContext';
+
 interface VerificationScreenProps {
   onScanComplete: (type: VerificationType) => void;
   beneficiary: Beneficiary;
@@ -13,6 +15,7 @@ type ScanStage = 'PRE_SCAN' | 'INSERT_CARD' | 'BIO_LOCK' | 'BIO_SCANNING' | 'BIO
 type ExceptionReason = 'DECEASED' | 'NOT_AT_HOME' | 'DAMAGED_ID' | null;
 
 const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete, beneficiary, onBack }) => {
+  const { t } = useLanguage();
   const [scanStage, setScanStage] = useState<ScanStage>('PRE_SCAN');
   const [showExceptionMenu, setShowExceptionMenu] = useState(false);
   const [verificationLocation, setVerificationLocation] = useState<VerificationType | null>(null);
@@ -106,7 +109,7 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                    <div className="space-y-4 pt-2">
                        <div className="flex items-center gap-3">
                            <div className="h-px bg-gray-200 flex-1"></div>
-                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select Mode</span>
+                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t.verification.selectProtocol}</span>
                            <div className="h-px bg-gray-200 flex-1"></div>
                        </div>
 
@@ -123,9 +126,9 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                                        <Users size={20} />
                                    </div>
                                    <div>
-                                       <span className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-0.5 block">Mode A</span>
-                                       <h3 className="font-bold text-gov-900 text-lg">Community Hall</h3>
-                                       <p className="text-xs text-gray-500 mt-1">Batch verification for healthy pensioners.</p>
+                                       <span className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-0.5 block">{t.verification.modeA}</span>
+                                       <h3 className="font-bold text-gov-900 text-lg">{t.verification.communityHall}</h3>
+                                       <p className="text-xs text-gray-500 mt-1">{t.verification.hallDesc}</p>
                                    </div>
                                </div>
                            </button>
@@ -142,9 +145,9 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                                        <Home size={20} />
                                    </div>
                                    <div>
-                                       <span className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-0.5 block">Mode B</span>
-                                       <h3 className="font-bold text-gov-900 text-lg">Home Visit</h3>
-                                       <p className="text-xs text-gray-500 mt-1">GPS-locked visits for bedridden patients.</p>
+                                       <span className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-0.5 block">{t.verification.modeB}</span>
+                                       <h3 className="font-bold text-gov-900 text-lg">{t.verification.homeVisit}</h3>
+                                       <p className="text-xs text-gray-500 mt-1">{t.verification.homeDesc}</p>
                                    </div>
                                </div>
                            </button>
@@ -156,7 +159,7 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                                 className="w-full py-2 text-xs text-gray-400 font-bold hover:text-red-600 transition-colors flex items-center justify-center gap-2"
                             >
                                 <AlertCircle size={14} />
-                                Report Issue / Unable to Verify
+                                {t.verification.reportIssue}
                             </button>
                             
                             <AnimatePresence>
@@ -170,15 +173,15 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                                         <div className="p-2 space-y-1">
                                             <button onClick={() => handleException('DECEASED')} className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-700 rounded-lg flex items-center gap-3 transition-colors">
                                                 <UserX size={16} />
-                                                <span className="text-xs font-bold">Beneficiary Deceased</span>
+                                                <span className="text-xs font-bold">{t.verification.deceased}</span>
                                             </button>
                                             <button onClick={() => handleException('NOT_AT_HOME')} className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-700 rounded-lg flex items-center gap-3 transition-colors">
                                                 <Home size={16} />
-                                                <span className="text-xs font-medium">Not at Home</span>
+                                                <span className="text-xs font-medium">{t.verification.notAtHome}</span>
                                             </button>
                                             <button onClick={() => handleException('DAMAGED_ID')} className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-700 rounded-lg flex items-center gap-3 transition-colors">
                                                 <AlertTriangle size={16} />
-                                                <span className="text-xs font-medium">MyKad Damaged/Missing</span>
+                                                <span className="text-xs font-medium">{t.verification.damagedId}</span>
                                             </button>
                                         </div>
                                     </motion.div>
@@ -197,22 +200,22 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                  
                  <div className="mb-12 text-center relative z-10 transition-all duration-300">
                     <h3 className="text-2xl font-bold text-gov-900">
-                        {scanStage === 'INSERT_CARD' && 'Secure Connection'}
-                        {scanStage === 'BIO_LOCK' && 'Identity Locked'}
-                        {scanStage === 'BIO_SCANNING' && 'Verifying Biometrics'}
-                        {scanStage === 'BIO_SUCCESS' && 'Identity Confirmed'}
-                        {scanStage === 'GPS_SCANNING' && 'Verifying Location'}
-                        {scanStage === 'GPS_SUCCESS' && 'Location Verified'}
-                        {scanStage === 'READING_DATA' && 'Verifying Identity'}
+                        {scanStage === 'INSERT_CARD' && t.verification.secureConnection}
+                        {scanStage === 'BIO_LOCK' && t.verification.identityLocked}
+                        {scanStage === 'BIO_SCANNING' && t.verification.verifyingBiometrics}
+                        {scanStage === 'BIO_SUCCESS' && t.verification.identityConfirmed}
+                        {scanStage === 'GPS_SCANNING' && t.verification.verifyingLocation}
+                        {scanStage === 'GPS_SUCCESS' && t.verification.locationVerified}
+                        {scanStage === 'READING_DATA' && t.verification.verifyingIdentity}
                     </h3>
                     <p className="text-gray-500 text-sm mt-1">
-                        {scanStage === 'INSERT_CARD' && 'Establishing secure link with MyKad...'}
-                        {scanStage === 'BIO_LOCK' && 'Biometric verification required to decrypt data.'}
-                        {scanStage === 'BIO_SCANNING' && 'Scanning thumbprint against secure chip data...'}
-                        {scanStage === 'BIO_SUCCESS' && 'Biometric data matched with MyKad chip.'}
-                        {scanStage === 'GPS_SCANNING' && `Validating agent presence at ${verificationLocation === 'HALL' ? 'Community Hall' : 'Home Visit'} coordinates...`}
-                        {scanStage === 'GPS_SUCCESS' && 'Location check passed successfully.'}
-                        {scanStage === 'READING_DATA' && 'Decrypting secure chip & financial records...'}
+                        {scanStage === 'INSERT_CARD' && t.verification.establishingLink}
+                        {scanStage === 'BIO_LOCK' && t.verification.bioRequired}
+                        {scanStage === 'BIO_SCANNING' && t.verification.scanningThumb}
+                        {scanStage === 'BIO_SUCCESS' && t.verification.bioMatched}
+                        {scanStage === 'GPS_SCANNING' && t.verification.validatingAgent.replace('{location}', verificationLocation === 'HALL' ? t.verification.communityHall : t.verification.homeVisit)}
+                        {scanStage === 'GPS_SUCCESS' && t.verification.locCheckPassed}
+                        {scanStage === 'READING_DATA' && t.verification.decrypting}
                     </p>
                  </div>
 
@@ -264,7 +267,7 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                             </button>
                             <div className="absolute -bottom-16 left-0 right-0 text-center">
                                 <p className="text-xs font-bold text-red-500 animate-pulse uppercase tracking-widest">
-                                    {scanStage === 'BIO_SCANNING' ? 'Verifying...' : 'Touch to Unlock'}
+                                    {scanStage === 'BIO_SCANNING' ? t.verification.verifying : t.verification.touchUnlock}
                                 </p>
                             </div>
                          </motion.div>
@@ -290,8 +293,8 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                             </motion.div>
                         </motion.div>
                         <div className="absolute -bottom-16 left-0 right-0 text-center">
-                             <p className="text-xs font-bold text-green-600 uppercase tracking-widest">Identity Verified</p>
-                             <p className="text-[10px] text-green-600/70 font-mono mt-1">Match: 99.9%</p>
+                             <p className="text-xs font-bold text-green-600 uppercase tracking-widest">{t.verification.identityVerified}</p>
+                             <p className="text-[10px] text-green-600/70 font-mono mt-1">{t.verification.match}: 99.9%</p>
                          </div>
                     </div>
                  )}
@@ -320,7 +323,7 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                         </motion.div>
                          <div className="absolute -bottom-16 left-0 right-0 text-center">
                              <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">
-                                 Checking {verificationLocation === 'HALL' ? 'Center' : 'Residence'} Coordinates...
+                                 {verificationLocation === 'HALL' ? t.verification.checkingCenter : t.verification.checkingResidence}
                              </p>
                          </div>
                     </div>
@@ -345,7 +348,7 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                             </motion.div>
                         </motion.div>
                         <div className="absolute -bottom-16 left-0 right-0 text-center">
-                             <p className="text-xs font-bold text-green-600 uppercase tracking-widest">Location Matched</p>
+                             <p className="text-xs font-bold text-green-600 uppercase tracking-widest">{t.verification.locationMatched}</p>
                              <p className="text-[10px] text-green-600/70 font-mono mt-1">lat: 3.1415, long: 101.6869</p>
                          </div>
                     </div>
@@ -355,16 +358,16 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
             <div className="w-full max-w-sm mx-auto px-8 pb-12 space-y-3 text-center shrink-0 mt-auto relative z-30">
                 <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
                     <span>
-                        {scanStage === 'BIO_LOCK' || scanStage === 'BIO_SCANNING' ? 'Waiting for Input' : 
-                         scanStage === 'BIO_SUCCESS' ? 'Authenticated' :
-                         scanStage === 'GPS_SCANNING' ? 'Triangulating' : 
-                         scanStage === 'GPS_SUCCESS' ? 'Success' : 'Accessing JPN Database'}
+                        {scanStage === 'BIO_LOCK' || scanStage === 'BIO_SCANNING' ? t.verification.waitingInput : 
+                         scanStage === 'BIO_SUCCESS' ? t.verification.authenticated :
+                         scanStage === 'GPS_SCANNING' ? t.verification.triangulating : 
+                         scanStage === 'GPS_SUCCESS' ? t.verification.success : t.verification.accessingDb}
                     </span>
                     <span>
-                        {scanStage === 'BIO_LOCK' || scanStage === 'BIO_SCANNING' ? 'LOCKED' : 
-                         scanStage === 'BIO_SUCCESS' ? 'UNLOCKED' :
-                         scanStage === 'GPS_SCANNING' ? 'SEARCHING' : 
-                         scanStage === 'GPS_SUCCESS' ? 'MATCHED' : 'SECURE'}
+                        {scanStage === 'BIO_LOCK' || scanStage === 'BIO_SCANNING' ? t.verification.locked : 
+                         scanStage === 'BIO_SUCCESS' ? t.verification.unlocked :
+                         scanStage === 'GPS_SCANNING' ? t.verification.searching : 
+                         scanStage === 'GPS_SUCCESS' ? t.verification.matched : t.verification.secure}
                     </span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
