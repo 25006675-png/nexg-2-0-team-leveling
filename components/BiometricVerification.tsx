@@ -93,8 +93,6 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
     }
   };
 
-  const faceStepRef = useRef<FaceStep>('INIT');
-
   useEffect(() => {
       faceStepRef.current = faceStep;
   }, [faceStep]);
