@@ -10,18 +10,23 @@ interface BiometricVerificationProps {
 }
 
 type Mode = 'FINGERPRINT' | 'FACE';
-type FaceStep = 'INIT' | 'LOADING_MODELS' | 'DETECTING' | 'CHALLENGE' | 'VERIFYING' | 'SUCCESS' | 'FAILURE';
+type FaceStep = 'INIT' | 'LOADING_MODELS' | 'DETECTING' | 'HOLD_STILL' | 'CHALLENGE' | 'VERIFYING' | 'SUCCESS' | 'FAILURE';
 type ChallengeType = 'BLINK' | 'SMILE';
 
 const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerified, onCancel, referenceImage }) => {
   const [mode, setMode] = useState<Mode>('FINGERPRINT');
   const [faceStep, setFaceStep] = useState<FaceStep>('INIT');
   const [challenge, setChallenge] = useState<ChallengeType>('BLINK');
+  const [challengeQueue, setChallengeQueue] = useState<ChallengeType[]>([]);
   const [debugMsg, setDebugMsg] = useState<string>('');
+  const [holdProgress, setHoldProgress] = useState(0);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const faceStepRef = useRef<FaceStep>('INIT');
+  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const challengeQueueRef = useRef<ChallengeType[]>([]);
 
   // --- FINGERPRINT MODE LOGIC ---
   // This simulates the existing fingerprint scan flow
@@ -94,6 +99,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
       faceStepRef.current = faceStep;
   }, [faceStep]);
 
+  useEffect(() => {
+      challengeQueueRef.current = challengeQueue;
+  }, [challengeQueue]);
+
   const handleVideoPlay = () => {
     setFaceStep('DETECTING');
     const interval = setInterval(async () => {
@@ -119,17 +128,46 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
         const detection = resizedDetections[0];
         const landmarks = detection.landmarks;
         
+        // Draw landmarks for feedback
+        // faceapi.draw.drawFaceLandmarks(canvasRef.current, resizedDetections);
+
         if (faceStepRef.current === 'DETECTING') {
-           // Face found, start challenge
-           const newChallenge = Math.random() > 0.5 ? 'BLINK' : 'SMILE';
-           setChallenge(newChallenge);
-           setFaceStep('CHALLENGE');
+           // Face found, transition to HOLD_STILL
+           setFaceStep('HOLD_STILL');
+           setHoldProgress(0);
+           
+           // Start Hold Timer
+           let progress = 0;
+           const holdInterval = setInterval(() => {
+               progress += 10;
+               setHoldProgress(progress);
+               if (progress >= 100) {
+                   clearInterval(holdInterval);
+                   // Start Challenges
+                   const q: ChallengeType[] = ['BLINK', 'SMILE']; // Fixed sequence for standardization
+                   setChallengeQueue(q);
+                   setChallenge(q[0]);
+                   setFaceStep('CHALLENGE');
+               }
+           }, 200); // 2 seconds total
+           holdTimerRef.current = holdInterval;
+
         } else if (faceStepRef.current === 'CHALLENGE') {
            checkLiveness(landmarks, detection.descriptor);
         }
+      } else {
+          // Face lost during hold
+          if (faceStepRef.current === 'HOLD_STILL') {
+              if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+              setFaceStep('DETECTING');
+              setHoldProgress(0);
+          }
       }
     }, 100);
-    return () => clearInterval(interval);
+    return () => {
+        clearInterval(interval);
+        if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+    };
   };
 
   const checkLiveness = (landmarks: faceapi.FaceLandmarks68, descriptor: Float32Array) => {
@@ -137,24 +175,40 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
     const rightEye = landmarks.getRightEye();
     const mouth = landmarks.getMouth();
 
+    let passed = false;
+
     if (challenge === 'BLINK') {
       const leftEAR = getEAR(leftEye);
       const rightEAR = getEAR(rightEye);
       const avgEAR = (leftEAR + rightEAR) / 2;
 
-      if (avgEAR < 0.3) { // Blink threshold
-         verifyIdentity(descriptor);
+      if (avgEAR < 0.25) { // Stricter Blink threshold
+         passed = true;
       }
     } else if (challenge === 'SMILE') {
-       // Simple smile detection: mouth width / jaw width or similar
-       // Or just mouth aspect ratio
        const mouthWidth = distance(mouth[0], mouth[6]);
        const jaw = landmarks.getJawOutline();
        const jawWidth = distance(jaw[0], jaw[16]);
        
-       if (mouthWidth / jawWidth > 0.35) { // Heuristic threshold
-          verifyIdentity(descriptor);
+       if (mouthWidth / jawWidth > 0.45) { // Stricter Smile threshold
+          passed = true;
        }
+    }
+
+    if (passed) {
+        // Move to next challenge or verify
+        const currentQ = challengeQueueRef.current;
+        const nextQ = currentQ.slice(1);
+        
+        if (nextQ.length > 0) {
+            setChallengeQueue(nextQ);
+            setChallenge(nextQ[0]);
+            // Small delay to prevent instant transition confusion
+            setFaceStep('HOLD_STILL'); // Briefly hold before next challenge? No, just switch.
+            // Actually, let's add a small "Good" feedback
+        } else {
+            verifyIdentity(descriptor);
+        }
     }
   };
 
@@ -337,6 +391,26 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                     </motion.div>
                 )}
 
+                {faceStep === 'HOLD_STILL' && (
+                    <motion.div key="hold" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
+                        <div className="w-16 h-16 mx-auto mb-4 relative flex items-center justify-center">
+                            <div className="absolute inset-0 border-4 border-white/20 rounded-full"></div>
+                            <svg className="w-full h-full rotate-[-90deg]">
+                                <circle
+                                    cx="32" cy="32" r="28"
+                                    stroke="currentColor" strokeWidth="4" fill="none"
+                                    className="text-cyan-400 transition-all duration-200"
+                                    strokeDasharray="176"
+                                    strokeDashoffset={176 - (176 * holdProgress) / 100}
+                                />
+                            </svg>
+                            <User className="w-8 h-8 text-white absolute" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-white mb-1">Hold Still</h3>
+                        <p className="text-cyan-200 text-sm">Analyzing facial features...</p>
+                    </motion.div>
+                )}
+
                 {faceStep === 'CHALLENGE' && (
                     <motion.div key="challenge" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
                         {challenge === 'BLINK' ? (
@@ -347,7 +421,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                         <h3 className="text-3xl font-bold text-yellow-400 mb-1 uppercase tracking-wider">
                             {challenge === 'BLINK' ? "PLEASE BLINK" : "PLEASE SMILE"}
                         </h3>
-                        <p className="text-white/80 text-sm">Liveness Check Required</p>
+                        <p className="text-white/80 text-sm">Liveness Check {challengeQueue.length + 1}/2</p>
                     </motion.div>
                 )}
 
