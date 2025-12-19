@@ -4,6 +4,7 @@ import { Cpu, ChevronLeft, Check, Fingerprint, MapPin, AlertCircle, UserX, Home,
 import { Beneficiary, VerificationType } from '../types';
 import { OfflineManager } from '../utils/OfflineManager';
 import { useLanguage } from '../contexts/LanguageContext';
+import BiometricVerification from './BiometricVerification';
 
 interface VerificationScreenProps {
   onScanComplete: (type: VerificationType) => void;
@@ -68,38 +69,31 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
 
   const handleBiometricAuth = () => {
       setScanStage('BIO_SCANNING');
+  };
+
+  const handleBiometricSuccess = () => {
+      setScanStage('BIO_SUCCESS');
       
-      // Animation 2: Scanning -> Success or Fail
+      // Animation 2.5: Success -> GPS Auto-Verify (skip manual lock)
       setTimeout(() => {
-          // Since we already validated the ID in JPN_CHECK, this is now just a formality/simulation of "Success"
-          // unless we want to simulate biometric failure for some reason.
-          // For now, assume if ID is correct, Biometric is correct (or we could add a random fail chance).
-          // The user said "unsuccessful if I use wrong ID", which we handled in JPN_CHECK.
-          // So here we can assume success.
-          
-          setScanStage('BIO_SUCCESS');
-          
-          // Animation 2.5: Success -> GPS Auto-Verify (skip manual lock)
-          setTimeout(() => {
-             setScanStage('GPS_SCANNING');
-             
-             // GPS Check Flow
-             setTimeout(() => {
-                setScanStage('GPS_SUCCESS');
+         setScanStage('GPS_SCANNING');
+         
+         // GPS Check Flow
+         setTimeout(() => {
+            setScanStage('GPS_SUCCESS');
 
+            setTimeout(() => {
+                setScanStage('READING_DATA');
+                
                 setTimeout(() => {
-                    setScanStage('READING_DATA');
-                    
-                    setTimeout(() => {
-                        if (verificationLocation) {
-                            onScanComplete(verificationLocation);
-                        }
-                    }, 3000); // Decrypt time
-                }, 2000); // Success display time
-             }, 2500); // GPS Check time
+                    if (verificationLocation) {
+                        onScanComplete(verificationLocation);
+                    }
+                }, 3000); // Decrypt time
+            }, 2000); // Success display time
+         }, 2500); // GPS Check time
 
-          }, 2000);
-      }, 1500);
+      }, 2000);
   };
 
   const handleException = (reason: ExceptionReason) => {
@@ -364,25 +358,12 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
 
                  {/* STAGE 2: BIOMETRIC LOCK & SCANNING */}
                  {(scanStage === 'BIO_LOCK' || scanStage === 'BIO_SCANNING') && (
-                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-20">
-                         <motion.div 
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="relative"
-                         >
-                            <div className={`absolute inset-0 rounded-full blur-xl ${scanStage === 'BIO_SCANNING' ? 'bg-red-500/40 animate-pulse' : 'bg-red-500/20'}`}></div>
-                            <button 
-                                onClick={scanStage === 'BIO_LOCK' ? handleBiometricAuth : undefined}
-                                className={`w-32 h-32 bg-white rounded-full border-4 flex items-center justify-center shadow-2xl relative z-10 transition-all ${scanStage === 'BIO_SCANNING' ? 'border-red-400 scale-105' : 'border-red-100 active:scale-95'}`}
-                            >
-                                <Fingerprint size={64} className={`text-red-500 ${scanStage === 'BIO_SCANNING' ? 'animate-pulse' : ''}`} />
-                            </button>
-                            <div className="absolute -bottom-16 left-0 right-0 text-center">
-                                <p className="text-xs font-bold text-red-500 animate-pulse uppercase tracking-widest">
-                                    {scanStage === 'BIO_SCANNING' ? t.verification.verifying : t.verification.touchToUnlock}
-                                </p>
-                            </div>
-                         </motion.div>
+                     <div className="w-full h-full flex items-center justify-center">
+                        <BiometricVerification 
+                            onVerified={handleBiometricSuccess}
+                            onCancel={() => setScanStage('BIO_LOCK')}
+                            referenceImage={selectedIcBeneficiary?.photoUrl}
+                        />
                      </div>
                  )}
 
