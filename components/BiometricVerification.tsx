@@ -40,26 +40,30 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
 
   useEffect(() => {
     if (mode === 'FACE') {
-      loadModels();
+      initFaceMode();
     }
     return () => {
       stopVideo();
     };
   }, [mode]);
 
-  const loadModels = async () => {
+  const initFaceMode = async () => {
     setFaceStep('LOADING_MODELS');
     try {
-      await Promise.all([
+      // Load models and start video in parallel for faster startup
+      const modelPromise = Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
         faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-        faceapi.nets.faceRecognitionNet.loadFromUri('/models'), // Needed for descriptor
+        faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
       ]);
+      
+      const videoPromise = startVideo();
+
+      await Promise.all([modelPromise, videoPromise]);
       setFaceStep('INIT');
-      startVideo();
     } catch (error) {
-      console.error("Failed to load models", error);
-      setDebugMsg("Failed to load AI models. Ensure /public/models exists.");
+      console.error("Initialization failed", error);
+      setDebugMsg("Failed to initialize. Check camera permissions and models.");
       setFaceStep('FAILURE');
     }
   };
@@ -73,8 +77,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
       }
     } catch (err) {
       console.error("Camera error", err);
-      setDebugMsg("Camera access denied.");
-      setFaceStep('FAILURE');
+      throw new Error("Camera access denied");
     }
   };
 
