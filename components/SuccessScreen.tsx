@@ -50,6 +50,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
                   {isOffline ? t.success.proofCaptured : t.success.verificationSuccessful}
                   <br/>{isOffline ? t.success.securelyStored : ''}
               </h2>
+              {!beneficiary.completed && (
+                <p className="text-gov-600 font-medium mt-1">
+                  Service {beneficiary.serviceCount || 0}/2 Completed
+                </p>
+              )}
+              {beneficiary.completed && (
+                <p className="text-green-600 font-medium mt-1">
+                  All Services Completed
+                </p>
+              )}
               <p className="text-gray-500 text-sm mt-2 max-w-xs md:max-w-none">
                 {isOffline 
                     ? t.success.offlineDesc

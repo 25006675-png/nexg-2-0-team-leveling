@@ -27,4 +27,5 @@ export type Beneficiary = {
   verificationType?: VerificationType;
   syncStatus?: SyncStatus;
   referenceId?: string;
+  serviceCount?: number;
 };

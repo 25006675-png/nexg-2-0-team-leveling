@@ -6,7 +6,9 @@ import { LogOut, Battery, Signal, Shield, Check, ChevronLeft, MapPin, Settings, 
 import LoginScreen from '../components/LoginScreen';
 import AgentGeoCheck from '../components/AgentGeoCheck';
 import DashboardScreen from '../components/DashboardScreen';
+import ResidentProfile from '../components/ResidentProfile';
 import VerificationScreen from '../components/ScanScreen';
+import WakilVerificationScreen, { WakilStep } from '../components/WakilVerificationScreen';
 import ConfirmationScreen from '../components/VerifyScreen';
 import SuccessScreen from '../components/SuccessScreen';
 import SettingsScreen from '../components/SettingsScreen';
@@ -16,11 +18,13 @@ import { BENEFICIARIES_BY_KAMPUNG } from '../utils/mockData';
 import { OfflineManager } from '../utils/OfflineManager';
 import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 
-export type Step = 'login' | 'geo_check' | 'dashboard' | 'verification' | 'confirmation' | 'success' | 'settings' | 'history';
+export type Step = 'login' | 'geo_check' | 'dashboard' | 'resident_profile' | 'verification' | 'wakil_verification' | 'confirmation' | 'success' | 'settings' | 'history';
 
 const AppContent: React.FC = () => {
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>('login');
+  const [verificationMode, setVerificationMode] = useState<'standard' | 'wakil' | null>(null);
+  const [wakilInternalStep, setWakilInternalStep] = useState<WakilStep>('LEGAL_DECLARATION');
   const [agentId, setAgentId] = useState('KK-0012-P');
   const [selectedKampung, setSelectedKampung] = useState<Kampung | null>(null);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
@@ -88,7 +92,8 @@ const AppContent: React.FC = () => {
           status: b.status,
           verificationType: b.verificationType,
           syncStatus: b.syncStatus,
-          referenceId: b.referenceId
+          referenceId: b.referenceId,
+          serviceCount: b.serviceCount
       };
       
       localStorage.setItem('pencen_app_data', JSON.stringify(parsed));
@@ -120,6 +125,7 @@ const AppContent: React.FC = () => {
     setStep('login');
     setSelectedBeneficiary(null);
     setSelectedKampung(null);
+    setVerificationMode(null);
   };
 
   const handleBack = () => {
@@ -130,9 +136,16 @@ const AppContent: React.FC = () => {
       case 'dashboard':
         handleLogout();
         break;
-      case 'verification':
+      case 'resident_profile':
         setStep('dashboard');
         setSelectedBeneficiary(null);
+        setVerificationMode(null);
+        break;
+      case 'verification':
+        setStep('resident_profile');
+        break;
+      case 'wakil_verification':
+        setStep('resident_profile');
         break;
       case 'confirmation':
         setStep('verification');
@@ -140,6 +153,7 @@ const AppContent: React.FC = () => {
       case 'success':
         setStep('dashboard');
         setSelectedBeneficiary(null);
+        setVerificationMode(null);
         break;
       case 'settings':
         // Return to previous logical step
@@ -155,7 +169,16 @@ const AppContent: React.FC = () => {
 
   const handleSelectBeneficiary = (beneficiary: Beneficiary) => {
     setSelectedBeneficiary(beneficiary);
-    setStep('verification');
+    setStep('resident_profile');
+  };
+
+  const handleModeSelect = (mode: 'standard' | 'wakil') => {
+    setVerificationMode(mode);
+    if (mode === 'standard') {
+      setStep('verification');
+    } else {
+      setStep('wakil_verification');
+    }
   };
 
   const handleVerificationComplete = (type: VerificationType) => {
@@ -165,14 +188,46 @@ const AppContent: React.FC = () => {
     setStep('confirmation');
   };
 
+  const handleWakilComplete = (repName: string) => {
+    if (!selectedBeneficiary) return;
+
+    const currentServiceCount = selectedBeneficiary.serviceCount || 0;
+    const newServiceCount = currentServiceCount + 1;
+    const isCompleted = newServiceCount >= 2;
+
+    // Create a completed beneficiary object for Wakil mode
+    // In a real app, we would store the rep details too
+    const finalBeneficiary: Beneficiary = {
+        ...selectedBeneficiary,
+        completed: isCompleted,
+        serviceCount: newServiceCount,
+        syncStatus: isOffline ? 'pending' : 'synced',
+        verificationType: 'HOME' // Assuming Wakil is always Home/Bedridden
+    };
+
+    updateBeneficiaryAndSave(finalBeneficiary);
+    setStep('success');
+  };
+
   const handleConfirmationComplete = (updatedBeneficiary: Beneficiary) => {
+    const currentServiceCount = updatedBeneficiary.serviceCount || 0;
+    const newServiceCount = currentServiceCount + 1;
+    const isCompleted = newServiceCount >= 2;
+
     // Apply sync status based on offline mode
     const finalBeneficiary: Beneficiary = {
         ...updatedBeneficiary,
-        completed: true,
+        completed: isCompleted,
+        serviceCount: newServiceCount,
         syncStatus: isOffline ? 'pending' : 'synced'
     };
 
+    updateBeneficiaryAndSave(finalBeneficiary);
+    setSelectedBeneficiary(finalBeneficiary);
+    setStep('success');
+  };
+
+  const updateBeneficiaryAndSave = (finalBeneficiary: Beneficiary) => {
     setBeneficiaries(prev => prev.map(b => 
       b.ic === finalBeneficiary.ic ? finalBeneficiary : b
     ));
@@ -187,9 +242,6 @@ const AppContent: React.FC = () => {
             finalBeneficiary.referenceId || OfflineManager.generateReferenceId(finalBeneficiary.ic)
         );
     }
-
-    setSelectedBeneficiary(finalBeneficiary);
-    setStep('success');
   };
 
   const handleResetDatabase = () => {
@@ -208,14 +260,30 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const steps: Step[] = ['login', 'geo_check', 'dashboard', 'verification', 'confirmation', 'success'];
-  const stepLabels = {
+  // Dynamic Steps Calculation
+  let currentSteps: string[] = ['login', 'geo_check', 'dashboard'];
+  if (verificationMode === 'standard') {
+      currentSteps = [...currentSteps, 'verification', 'confirmation', 'success'];
+  } else if (verificationMode === 'wakil') {
+      currentSteps = [...currentSteps, 'wakil_verify', 'wakil_evidence', 'wakil_contract'];
+  } else if (step === 'resident_profile') {
+      currentSteps = [...currentSteps, 'resident_profile'];
+  } else if (step === 'verification' || step === 'confirmation' || step === 'success') {
+      // Fallback if mode is lost but step is advanced (shouldn't happen with proper state)
+      currentSteps = [...currentSteps, 'verification', 'confirmation', 'success'];
+  }
+
+  const stepLabels: Record<string, string> = {
     login: t.steps.login,
     geo_check: t.steps.geo_check,
     dashboard: t.steps.dashboard,
+    resident_profile: "Resident Profile",
     verification: t.steps.verification,
     confirmation: t.steps.confirmation,
     success: t.steps.success,
+    wakil_verify: "Verify Representative",
+    wakil_evidence: "Evidence & Consent",
+    wakil_contract: "Digital Contract",
     settings: t.steps.settings,
     history: t.steps.history
   };
@@ -261,15 +329,24 @@ const AppContent: React.FC = () => {
                       </div>
                       
                       <nav className="space-y-0">
-                          {steps.map((s, idx) => {
-                              const currentIdx = steps.indexOf(step);
-                              const thisIdx = steps.indexOf(s);
-                              const isActive = s === step;
-                              const isPast = currentIdx > thisIdx;
+                          {currentSteps.map((s, idx) => {
+                              // Calculate active index based on mode
+                              let activeIndex = currentSteps.indexOf(step);
+                              
+                              // Special handling for Wakil internal steps
+                              if (verificationMode === 'wakil' && step === 'wakil_verification') {
+                                  if (wakilInternalStep === 'LEGAL_DECLARATION' || wakilInternalStep === 'VERIFY_REP') activeIndex = currentSteps.indexOf('wakil_verify');
+                                  else if (wakilInternalStep === 'EVIDENCE') activeIndex = currentSteps.indexOf('wakil_evidence');
+                                  else if (wakilInternalStep === 'CONTRACT') activeIndex = currentSteps.indexOf('wakil_contract');
+                              }
+
+                              const thisIdx = idx;
+                              const isActive = thisIdx === activeIndex;
+                              const isPast = activeIndex > thisIdx;
                               
                               return (
                                   <div key={s} className="flex gap-4 relative group">
-                                      {idx !== steps.length - 1 && (
+                                      {idx !== currentSteps.length - 1 && (
                                         <div className={`absolute left-4 top-8 bottom-[-8px] w-0.5 ${isPast ? 'bg-blue-500' : 'bg-slate-700'}`} />
                                       )}
                                       
@@ -360,6 +437,23 @@ const AppContent: React.FC = () => {
                       setIsOffline={setIsOffline}
                       onSync={handleSyncData}
                       allowManualOfflineToggle={allowManualOfflineToggle}
+                    />
+                  )}
+                  {step === 'resident_profile' && selectedBeneficiary && (
+                    <ResidentProfile
+                      key="resident_profile"
+                      beneficiary={selectedBeneficiary}
+                      onSelectMode={handleModeSelect}
+                      onBack={handleBack}
+                    />
+                  )}
+                  {step === 'wakil_verification' && selectedBeneficiary && (
+                    <WakilVerificationScreen
+                      key="wakil_verification"
+                      beneficiary={selectedBeneficiary}
+                      onComplete={handleWakilComplete}
+                      onBack={handleBack}
+                      onStepChange={setWakilInternalStep}
                     />
                   )}
                   {step === 'verification' && selectedBeneficiary && (
