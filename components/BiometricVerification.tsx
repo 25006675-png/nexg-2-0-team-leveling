@@ -20,6 +20,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
   const [challengeQueue, setChallengeQueue] = useState<ChallengeType[]>([]);
   const [debugMsg, setDebugMsg] = useState<string>('');
   const [holdProgress, setHoldProgress] = useState(0);
+  const [metrics, setMetrics] = useState({ ear: 0, smile: 0 });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -131,6 +132,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
 
         if (faceStepRef.current === 'DETECTING') {
            // Face found, transition to HOLD_STILL
+           faceStepRef.current = 'HOLD_STILL'; // Prevent re-entry
            setFaceStep('HOLD_STILL');
            setHoldProgress(0);
            
@@ -145,6 +147,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                    const q: ChallengeType[] = ['BLINK', 'SMILE']; // Fixed sequence for standardization
                    setChallengeQueue(q);
                    setChallenge(q[0]);
+                   faceStepRef.current = 'CHALLENGE'; // Prevent re-entry
                    setFaceStep('CHALLENGE');
                }
            }, 200); // 2 seconds total
@@ -173,22 +176,28 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
     const rightEye = landmarks.getRightEye();
     const mouth = landmarks.getMouth();
 
+    const leftEAR = getEAR(leftEye);
+    const rightEAR = getEAR(rightEye);
+    const avgEAR = (leftEAR + rightEAR) / 2;
+
+    const mouthWidth = distance(mouth[0], mouth[6]);
+    const jaw = landmarks.getJawOutline();
+    const jawWidth = distance(jaw[0], jaw[16]);
+    const smileRatio = mouthWidth / jawWidth;
+
+    // Update metrics for debug UI
+    setMetrics({ ear: avgEAR, smile: smileRatio });
+
     let passed = false;
 
     if (challenge === 'BLINK') {
-      const leftEAR = getEAR(leftEye);
-      const rightEAR = getEAR(rightEye);
-      const avgEAR = (leftEAR + rightEAR) / 2;
-
-      if (avgEAR < 0.25) { // Stricter Blink threshold
+      // Relaxed threshold for better usability
+      if (avgEAR < 0.35) { 
          passed = true;
       }
     } else if (challenge === 'SMILE') {
-       const mouthWidth = distance(mouth[0], mouth[6]);
-       const jaw = landmarks.getJawOutline();
-       const jawWidth = distance(jaw[0], jaw[16]);
-       
-       if (mouthWidth / jawWidth > 0.45) { // Stricter Smile threshold
+       // Relaxed threshold for better usability
+       if (smileRatio > 0.4) { 
           passed = true;
        }
     }
@@ -353,6 +362,16 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
             onPlay={handleVideoPlay}
             className="absolute inset-0 w-full h-full object-cover opacity-80"
          />
+
+         {/* DEBUG OVERLAY */}
+         {metrics && (
+            <div className="absolute top-2 left-2 z-50 bg-black/60 p-2 rounded text-[10px] font-mono text-green-400 pointer-events-none">
+                <p>EAR: {metrics.ear.toFixed(3)} (Thresh: &lt;0.35)</p>
+                <p>Smile: {metrics.smile.toFixed(3)} (Thresh: &gt;0.40)</p>
+                <p>State: {faceStep}</p>
+                <p>Challenge: {challenge || 'None'}</p>
+            </div>
+         )}
          
          {/* Canvas Overlay for Landmarks */}
          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
