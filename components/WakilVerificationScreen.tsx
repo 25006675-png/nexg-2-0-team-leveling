@@ -370,18 +370,6 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               {/* STAGE: ID SELECT */}
               {repScanStage === 'ID_SELECT' && (
                  <div className="w-full max-w-md px-4 space-y-3">
-                      {/* Progress Bar for Rep Verification */}
-                      <div className="flex items-center justify-center gap-2 mb-6">
-                          <div className={`h-1.5 rounded-full transition-all duration-300 ${['ID_SELECT', 'INSERT_CARD', 'READING_CHIP'].includes(repScanStage) ? 'w-8 bg-purple-600' : 'w-2 bg-gray-200'}`} />
-                          <div className={`h-1.5 rounded-full transition-all duration-300 ${['BIO_SCANNING', 'BIO_SUCCESS'].includes(repScanStage) ? 'w-8 bg-purple-600' : 'w-2 bg-gray-200'}`} />
-                          <div className={`h-1.5 rounded-full transition-all duration-300 ${['LOCATION_CHECK', 'LOCATION_SUCCESS'].includes(repScanStage) ? 'w-8 bg-purple-600' : 'w-2 bg-gray-200'}`} />
-                      </div>
-                      <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider px-8 mb-4">
-                          <span className={['ID_SELECT', 'INSERT_CARD', 'READING_CHIP'].includes(repScanStage) ? 'text-purple-600' : ''}>Scan IC</span>
-                          <span className={['BIO_SCANNING', 'BIO_SUCCESS'].includes(repScanStage) ? 'text-purple-600' : ''}>Biometric</span>
-                          <span className={['LOCATION_CHECK', 'LOCATION_SUCCESS'].includes(repScanStage) ? 'text-purple-600' : ''}>Location</span>
-                      </div>
-
                       {MOCK_REPS.map((rep, idx) => (
                           <button
                               key={idx}
@@ -541,6 +529,48 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                  </div>
               )}
 
+              {/* Footer Progress Bar (Rep Verification) */}
+              {repScanStage !== 'ID_SELECT' && repScanStage !== 'LOCATION_SUCCESS' && (
+                <div className="w-full max-w-sm mx-auto px-8 pb-12 space-y-3 text-center shrink-0 mt-auto relative z-30">
+                    <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
+                        <span>
+                            {(repScanStage === 'BIO_SCANNING') ? "Waiting Input" : 
+                             repScanStage === 'BIO_SUCCESS' ? "Authenticated" :
+                             (repScanStage === 'LOCATION_CHECK') ? "Triangulating" : 
+                             (repScanStage === 'LOCATION_SUCCESS') ? "Success" : "Accessing DB"}
+                        </span>
+                        <span>
+                            {(repScanStage === 'BIO_SCANNING') ? "Locked" : 
+                             repScanStage === 'BIO_SUCCESS' ? "Unlocked" :
+                             (repScanStage === 'LOCATION_CHECK') ? "Searching" : 
+                             (repScanStage === 'LOCATION_SUCCESS') ? "Matched" : "Secure"}
+                        </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                        {(repScanStage === 'INSERT_CARD' || repScanStage === 'READING_CHIP') && (
+                            <motion.div 
+                                initial={{ width: "0%" }}
+                                animate={{ width: "100%" }}
+                                transition={{ duration: 3, ease: "circInOut" }}
+                                className="h-full bg-gov-900"
+                            />
+                        )}
+                        {(repScanStage === 'BIO_SCANNING') && (
+                             <div className={`h-full bg-red-500 animate-pulse w-[40%]`} />
+                        )}
+                        {repScanStage === 'BIO_SUCCESS' && (
+                             <div className="h-full bg-green-500 w-[50%]" />
+                        )}
+                         {(repScanStage === 'LOCATION_CHECK') && (
+                             <div className="h-full bg-blue-500 w-[80%] animate-pulse" />
+                        )}
+                        {(repScanStage === 'LOCATION_SUCCESS') && (
+                             <div className="h-full bg-green-500 w-full" />
+                        )}
+                    </div>
+                </div>
+              )}
+
             </motion.div>
           )}
 
@@ -649,18 +679,6 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                     {consentStage === 'GPS_SUCCESS' && "Location Verified"}
                                     {consentStage === 'READING_DATA' && "Signing Contract"}
                                 </h3>
-                                
-                                {/* Progress Bar for Consent Flow */}
-                                <div className="flex items-center justify-center gap-2 mt-3 mb-4">
-                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${['ID_SELECT', 'INSERT_CARD', 'JPN_CHECK'].includes(consentStage) ? 'w-8 bg-blue-600' : 'w-2 bg-gray-200'}`} />
-                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS'].includes(consentStage) ? 'w-8 bg-blue-600' : 'w-2 bg-gray-200'}`} />
-                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${['GPS_SCANNING', 'GPS_SUCCESS', 'READING_DATA'].includes(consentStage) ? 'w-8 bg-blue-600' : 'w-2 bg-gray-200'}`} />
-                                </div>
-                                <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider px-8">
-                                    <span className={['ID_SELECT', 'INSERT_CARD', 'JPN_CHECK'].includes(consentStage) ? 'text-blue-600' : ''}>Scan IC</span>
-                                    <span className={['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS'].includes(consentStage) ? 'text-blue-600' : ''}>Biometric</span>
-                                    <span className={['GPS_SCANNING', 'GPS_SUCCESS', 'READING_DATA'].includes(consentStage) ? 'text-blue-600' : ''}>Location</span>
-                                </div>
                              </div>
 
                              <div className="flex flex-col items-center">
@@ -894,6 +912,48 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                     </div>
                                  )}
                              </div>
+
+                             {/* Footer Progress Bar (Consent Flow) */}
+                             {consentStage !== 'ID_SELECT' && consentStage !== 'READING_DATA' && (
+                                <div className="w-full max-w-sm mx-auto px-8 pb-12 space-y-3 text-center shrink-0 mt-auto relative z-30">
+                                    <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
+                                        <span>
+                                            {(consentStage === 'BIO_SCANNING' || consentStage === 'BIO_LOCK') ? "Waiting Input" : 
+                                             consentStage === 'BIO_SUCCESS' ? "Authenticated" :
+                                             (consentStage === 'GPS_SCANNING') ? "Triangulating" : 
+                                             (consentStage === 'GPS_SUCCESS') ? "Success" : "Accessing DB"}
+                                        </span>
+                                        <span>
+                                            {(consentStage === 'BIO_SCANNING' || consentStage === 'BIO_LOCK') ? "Locked" : 
+                                             consentStage === 'BIO_SUCCESS' ? "Unlocked" :
+                                             (consentStage === 'GPS_SCANNING') ? "Searching" : 
+                                             (consentStage === 'GPS_SUCCESS') ? "Matched" : "Secure"}
+                                        </span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                                        {(consentStage === 'INSERT_CARD' || consentStage === 'JPN_CHECK') && (
+                                            <motion.div 
+                                                initial={{ width: "0%" }}
+                                                animate={{ width: "100%" }}
+                                                transition={{ duration: 3, ease: "circInOut" }}
+                                                className="h-full bg-gov-900"
+                                            />
+                                        )}
+                                        {(consentStage === 'BIO_LOCK' || consentStage === 'BIO_SCANNING') && (
+                                             <div className={`h-full bg-red-500 animate-pulse ${consentStage === 'BIO_SCANNING' ? 'w-[40%]' : 'w-[20%]'}`} />
+                                        )}
+                                        {consentStage === 'BIO_SUCCESS' && (
+                                             <div className="h-full bg-green-500 w-[50%]" />
+                                        )}
+                                         {(consentStage === 'GPS_SCANNING') && (
+                                             <div className="h-full bg-blue-500 w-[80%] animate-pulse" />
+                                        )}
+                                        {(consentStage === 'GPS_SUCCESS') && (
+                                             <div className="h-full bg-green-500 w-full" />
+                                        )}
+                                    </div>
+                                </div>
+                             )}
                         </div>
                     )}
                  </div>
