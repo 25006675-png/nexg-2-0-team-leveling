@@ -30,6 +30,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
   const challengeQueueRef = useRef<ChallengeType[]>([]);
   const challengeRef = useRef<ChallengeType>('BLINK');
   const holdProgressRef = useRef(0);
+  const faceLostTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
       challengeRef.current = challenge;
@@ -144,6 +145,12 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                 const detection = resizedDetections[0];
                 const landmarks = detection.landmarks;
 
+                // Clear face lost timer if face is found
+                if (faceLostTimerRef.current) {
+                    clearTimeout(faceLostTimerRef.current);
+                    faceLostTimerRef.current = null;
+                }
+
                 if (faceStepRef.current === 'DETECTING') {
                     faceStepRef.current = 'HOLD_STILL';
                     setFaceStep('HOLD_STILL');
@@ -177,6 +184,15 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                     if (holdProgressRef.current === 0) {
                         setFaceStep('DETECTING');
                         faceStepRef.current = 'DETECTING';
+                    }
+                } else if (faceStepRef.current === 'CHALLENGE') {
+                    // If face lost during challenge, give a grace period before resetting
+                    if (!faceLostTimerRef.current) {
+                        faceLostTimerRef.current = setTimeout(() => {
+                            setFaceStep('DETECTING');
+                            faceStepRef.current = 'DETECTING';
+                            faceLostTimerRef.current = null;
+                        }, 3000); // 3 seconds grace period
                     }
                 }
             }
@@ -235,9 +251,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
         if (nextQ.length > 0) {
             setChallengeQueue(nextQ);
             setChallenge(nextQ[0]);
-            // Small delay to prevent instant transition confusion
-            setFaceStep('HOLD_STILL'); // Briefly hold before next challenge? No, just switch.
-            // Actually, let's add a small "Good" feedback
+            // Stay in CHALLENGE state, just update UI
         } else {
             verifyIdentity(descriptor);
         }
@@ -464,6 +478,12 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                             {challenge === 'BLINK' ? "PLEASE BLINK" : "PLEASE SMILE"}
                         </h3>
                         <p className="text-white/80 text-sm">Liveness Check {challengeQueue.length + 1}/2</p>
+                        {/* Face Lost Warning */}
+                        {metrics.ear === 0 && metrics.smile === 0 && (
+                             <p className="text-red-400 text-xs mt-2 animate-pulse">Face not detected - Keep position</p>
+                        )}
+                    </motion.div>
+                )}
                     </motion.div>
                 )}
 
