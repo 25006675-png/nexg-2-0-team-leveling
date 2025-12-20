@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Fingerprint, UserCheck, Lock, CheckCircle2, Clock, ShieldCheck, ScanFace } from 'lucide-react';
 import { Beneficiary } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import AlertModal from './AlertModal';
 
 interface ResidentProfileProps {
   beneficiary: Beneficiary;
@@ -12,10 +13,19 @@ interface ResidentProfileProps {
 
 const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelectMode, onBack }) => {
   const { t } = useLanguage();
+  const [showAlreadyVerifiedModal, setShowAlreadyVerifiedModal] = useState(false);
   
   // Logic: Card 2 is locked until Card 1 is completed
   // We check if serviceCount > 0 (meaning at least one verification done) OR if explicitly marked completed
   const isProofOfLifeComplete = (beneficiary.serviceCount && beneficiary.serviceCount > 0) || beneficiary.completed || false;
+
+  const handleProofOfLifeClick = () => {
+      if (isProofOfLifeComplete) {
+          setShowAlreadyVerifiedModal(true);
+      } else {
+          onSelectMode('standard');
+      }
+  };
 
   return (
     <motion.div
@@ -24,6 +34,15 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
       exit={{ opacity: 0, y: -20 }}
       className="h-full flex flex-col bg-gray-50"
     >
+      <AlertModal 
+        isOpen={showAlreadyVerifiedModal}
+        onClose={() => setShowAlreadyVerifiedModal(false)}
+        title="Verification Completed"
+        message={`Biometric Proof of Life has already been successfully verified.\n\nTimestamp: ${beneficiary.lastScanDate || new Date().toLocaleString()}`}
+        type="success"
+        actionLabel="OK"
+      />
+
       {/* Header */}
       <div className="bg-white px-6 py-6 border-b border-gray-200 shadow-sm shrink-0 z-10">
         <div className="flex items-center gap-4">
@@ -54,7 +73,7 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
           <motion.button
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
-            onClick={() => onSelectMode('standard')}
+            onClick={handleProofOfLifeClick}
             className="w-full bg-white rounded-2xl p-6 shadow-sm border border-gray-200 text-left relative overflow-hidden group"
           >
             <div className="flex items-start gap-5">

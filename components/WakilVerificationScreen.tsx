@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, AlertTriangle, Check, Camera, Fingerprint, FileText, MapPin, User, Loader2, X, Cpu, Database, Search, UserX, Radar, Upload } from 'lucide-react';
+import { Shield, AlertTriangle, Check, Camera, Fingerprint, FileText, MapPin, User, Loader2, X, Cpu, Database, Search, UserX, Radar, Upload, ScanLine } from 'lucide-react';
 import { Beneficiary } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import BiometricVerification from './BiometricVerification';
 
 export type WakilStep = 'LEGAL_DECLARATION' | 'VERIFY_REP' | 'EVIDENCE' | 'CONTRACT';
 
@@ -39,20 +40,40 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   const [repData, setRepData] = useState<{ name: string; ic: string } | null>(null);
   const [checkingLocation, setCheckingLocation] = useState(false);
   const [locationValid, setLocationValid] = useState(false);
+  const [showRepBioScanner, setShowRepBioScanner] = useState(false);
 
   // Evidence State
   const [photoCaptured, setPhotoCaptured] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [consentStage, setConsentStage] = useState<'ID_SELECT' | 'INSERT_CARD' | 'JPN_CHECK' | 'JPN_FAIL' | 'BIO_LOCK' | 'BIO_SCANNING' | 'BIO_SUCCESS' | 'GPS_SCANNING' | 'GPS_SUCCESS' | 'READING_DATA'>('ID_SELECT');
   const [consentIcOptions, setConsentIcOptions] = useState<Beneficiary[]>([]);
   const [isSigning, setIsSigning] = useState(false);
+  const [showConsentBioScanner, setShowConsentBioScanner] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-        // In a real app, we would upload this file
-        setPhotoCaptured(true);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPhotoPreview(reader.result as string);
+            setPhotoCaptured(true);
+        };
+        reader.readAsDataURL(file);
     }
+  };
+
+  const handleCameraCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              setPhotoPreview(reader.result as string);
+              setPhotoCaptured(true);
+          };
+          reader.readAsDataURL(file);
+      }
   };
 
   // Initialize Consent Options
@@ -85,13 +106,14 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
       setRepScanStage('READING_CHIP');
       setTimeout(() => {
         setRepScanStage('BIO_SCANNING');
-        
-        // 2. Bio Scan -> Success
-        setTimeout(() => {
-          setRepScanStage('BIO_SUCCESS');
-        }, 2000);
+        setShowRepBioScanner(true);
       }, 2000);
     }, 1500);
+  };
+
+  const handleRepBioVerified = () => {
+      setShowRepBioScanner(false);
+      setRepScanStage('BIO_SUCCESS');
   };
 
   const handleStartLocationCheck = () => {
@@ -127,8 +149,11 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
 
   const handleConsentBioAuth = () => {
     setConsentStage('BIO_SCANNING');
-    
-    setTimeout(() => {
+    setShowConsentBioScanner(true);
+  };
+
+  const handleConsentBioVerified = () => {
+      setShowConsentBioScanner(false);
       setConsentStage('BIO_SUCCESS');
       
       setTimeout(() => {
@@ -150,11 +175,10 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
           }, 2000);
         }, 2500);
       }, 1500);
-    }, 1500);
   };
 
   const handleCapturePhoto = () => {
-    setPhotoCaptured(true);
+    cameraInputRef.current?.click();
   };
 
   // Progress Calculation
@@ -347,22 +371,18 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                 </div>
               )}
 
-              {/* STAGE: BIO SCANNING */}
+              {/* STAGE: BIO SCANNING (Using BiometricVerification Component) */}
               {repScanStage === 'BIO_SCANNING' && (
-                 <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                     <motion.div 
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="relative"
-                     >
-                        <div className="absolute inset-0 rounded-full blur-xl bg-purple-500/40 animate-pulse"></div>
-                        <div className="w-32 h-32 bg-white rounded-full border-4 border-purple-400 flex items-center justify-center shadow-2xl relative z-10 scale-105">
-                            <Fingerprint size={64} className="text-purple-500 animate-pulse" />
-                        </div>
-                        <div className="absolute -bottom-16 left-0 right-0 text-center">
-                            <p className="text-xs font-bold text-purple-500 animate-pulse uppercase tracking-widest">Scanning...</p>
-                        </div>
-                     </motion.div>
+                 <div className="w-full h-full absolute inset-0 z-50 bg-white">
+                     {showRepBioScanner && (
+                         <BiometricVerification 
+                            onVerified={handleRepBioVerified}
+                            onCancel={() => {
+                                setShowRepBioScanner(false);
+                                setRepScanStage('ID_SELECT');
+                            }}
+                         />
+                     )}
                  </div>
               )}
 
@@ -487,6 +507,15 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                     <h3 className="text-2xl font-bold text-gov-900 mb-2">Proof of Condition</h3>
                     <p className="text-gray-500 mb-8 text-center">Capture photo of pensioner to verify condition</p>
                     
+                    <input 
+                        type="file" 
+                        ref={cameraInputRef}
+                        className="hidden" 
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleCameraCapture}
+                    />
+
                     <button
                         onClick={handleCapturePhoto}
                         className="w-full max-w-md aspect-video bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-3 hover:bg-gray-50 hover:border-purple-400 transition-all group mb-4"
@@ -521,6 +550,22 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                  </div>
               ) : (
                  <div className="flex-1 flex flex-col items-center justify-center">
+                     {/* Photo Preview */}
+                     {photoPreview && (
+                         <div className="mb-6 relative">
+                             <img src={photoPreview} alt="Evidence" className="w-48 h-48 object-cover rounded-xl shadow-lg border-4 border-white" />
+                             <button 
+                                onClick={() => {
+                                    setPhotoCaptured(false);
+                                    setPhotoPreview(null);
+                                }}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600"
+                             >
+                                 <X size={16} />
+                             </button>
+                         </div>
+                     )}
+
                      <div className="mb-8 text-center relative z-10 transition-all duration-300">
                         <h3 className="text-2xl font-bold text-gov-900">
                             {consentStage === 'ID_SELECT' && "Pensioner Consent"}
@@ -637,26 +682,40 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                      )}
 
                      {/* CONSENT: BIO LOCK & SCANNING */}
-                     {(consentStage === 'BIO_LOCK' || consentStage === 'BIO_SCANNING') && (
+                     {consentStage === 'BIO_LOCK' && (
                          <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
                              <motion.div 
                                 initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 className="relative"
                              >
-                                <div className={`absolute inset-0 rounded-full blur-xl ${consentStage === 'BIO_SCANNING' ? 'bg-red-500/40 animate-pulse' : 'bg-red-500/20'}`}></div>
+                                <div className="absolute inset-0 rounded-full blur-xl bg-red-500/20"></div>
                                 <button 
-                                    onClick={consentStage === 'BIO_LOCK' ? handleConsentBioAuth : undefined}
-                                    className={`w-32 h-32 bg-white rounded-full border-4 flex items-center justify-center shadow-2xl relative z-10 transition-all ${consentStage === 'BIO_SCANNING' ? 'border-red-400 scale-105' : 'border-red-100 active:scale-95'}`}
+                                    onClick={handleConsentBioAuth}
+                                    className="w-32 h-32 bg-white rounded-full border-4 flex items-center justify-center shadow-2xl relative z-10 transition-all border-red-100 active:scale-95"
                                 >
-                                    <Fingerprint size={64} className={`text-red-500 ${consentStage === 'BIO_SCANNING' ? 'animate-pulse' : ''}`} />
+                                    <Fingerprint size={64} className="text-red-500" />
                                 </button>
                                 <div className="absolute -bottom-16 left-0 right-0 text-center">
                                     <p className="text-xs font-bold text-red-500 animate-pulse uppercase tracking-widest">
-                                        {consentStage === 'BIO_SCANNING' ? "Scanning..." : "Touch to Consent"}
+                                        Touch to Consent
                                     </p>
                                 </div>
                              </motion.div>
+                         </div>
+                     )}
+
+                     {consentStage === 'BIO_SCANNING' && (
+                         <div className="w-full h-full absolute inset-0 z-50 bg-white">
+                             {showConsentBioScanner && (
+                                 <BiometricVerification 
+                                    onVerified={handleConsentBioVerified}
+                                    onCancel={() => {
+                                        setShowConsentBioScanner(false);
+                                        setConsentStage('BIO_LOCK');
+                                    }}
+                                 />
+                             )}
                          </div>
                      )}
 
