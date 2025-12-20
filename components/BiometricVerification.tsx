@@ -28,6 +28,11 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
   const faceStepRef = useRef<FaceStep>('INIT');
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const challengeQueueRef = useRef<ChallengeType[]>([]);
+  const challengeRef = useRef<ChallengeType>('BLINK');
+
+  useEffect(() => {
+      challengeRef.current = challenge;
+  }, [challenge]);
 
   // --- FINGERPRINT MODE LOGIC ---
   // This simulates the existing fingerprint scan flow
@@ -104,72 +109,86 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
 
   const handleVideoPlay = () => {
     setFaceStep('DETECTING');
-    const interval = setInterval(async () => {
-      if (!videoRef.current || !canvasRef.current) return;
-      if (faceStepRef.current === 'SUCCESS' || faceStepRef.current === 'FAILURE') return;
+  };
 
-      if (videoRef.current.paused || videoRef.current.ended) return;
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
 
-      const displaySize = { width: videoRef.current.videoWidth, height: videoRef.current.videoHeight };
-      faceapi.matchDimensions(canvasRef.current, displaySize);
+    const startDetection = () => {
+      interval = setInterval(async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        if (videoRef.current.paused || videoRef.current.ended) return;
+        if (faceStepRef.current === 'SUCCESS' || faceStepRef.current === 'FAILURE') return;
 
-      const detections = await faceapi.detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptors();
+        // Only run detection if we are in appropriate steps
+        if (!['DETECTING', 'HOLD_STILL', 'CHALLENGE'].includes(faceStepRef.current)) return;
 
-      const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        const displaySize = { width: videoRef.current.videoWidth, height: videoRef.current.videoHeight };
+        faceapi.matchDimensions(canvasRef.current, displaySize);
 
-      // Clear canvas
-      const ctx = canvasRef.current.getContext('2d');
-      ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        try {
+            const detections = await faceapi.detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptors();
 
-      if (resizedDetections.length > 0) {
-        const detection = resizedDetections[0];
-        const landmarks = detection.landmarks;
-        
-        // Draw landmarks for feedback
-        // faceapi.draw.drawFaceLandmarks(canvasRef.current, resizedDetections);
+            const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
-        if (faceStepRef.current === 'DETECTING') {
-           // Face found, transition to HOLD_STILL
-           faceStepRef.current = 'HOLD_STILL'; // Prevent re-entry
-           setFaceStep('HOLD_STILL');
-           setHoldProgress(0);
-           
-           // Start Hold Timer
-           let progress = 0;
-           const holdInterval = setInterval(() => {
-               progress += 10;
-               setHoldProgress(progress);
-               if (progress >= 100) {
-                   clearInterval(holdInterval);
-                   // Start Challenges
-                   const q: ChallengeType[] = ['BLINK', 'SMILE']; // Fixed sequence for standardization
-                   setChallengeQueue(q);
-                   setChallenge(q[0]);
-                   faceStepRef.current = 'CHALLENGE'; // Prevent re-entry
-                   setFaceStep('CHALLENGE');
-               }
-           }, 200); // 2 seconds total
-           holdTimerRef.current = holdInterval;
+            // Clear canvas
+            const ctx = canvasRef.current.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            }
 
-        } else if (faceStepRef.current === 'CHALLENGE') {
-           checkLiveness(landmarks, detection.descriptor);
+            if (resizedDetections.length > 0) {
+                const detection = resizedDetections[0];
+                const landmarks = detection.landmarks;
+
+                if (faceStepRef.current === 'DETECTING') {
+                    faceStepRef.current = 'HOLD_STILL';
+                    setFaceStep('HOLD_STILL');
+                    setHoldProgress(0);
+
+                    let progress = 0;
+                    const holdInterval = setInterval(() => {
+                        progress += 10;
+                        setHoldProgress(progress);
+                        if (progress >= 100) {
+                            clearInterval(holdInterval);
+                            const q: ChallengeType[] = ['BLINK', 'SMILE'];
+                            setChallengeQueue(q);
+                            setChallenge(q[0]);
+                            faceStepRef.current = 'CHALLENGE';
+                            setFaceStep('CHALLENGE');
+                        }
+                    }, 200);
+                    holdTimerRef.current = holdInterval;
+                } else if (faceStepRef.current === 'CHALLENGE') {
+                    checkLiveness(landmarks, detection.descriptor);
+                }
+            } else {
+                // Face lost
+                if (faceStepRef.current === 'HOLD_STILL') {
+                    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+                    setFaceStep('DETECTING');
+                    setHoldProgress(0);
+                    faceStepRef.current = 'DETECTING';
+                }
+            }
+        } catch (e) {
+            console.error("Detection error", e);
         }
-      } else {
-          // Face lost during hold
-          if (faceStepRef.current === 'HOLD_STILL') {
-              if (holdTimerRef.current) clearInterval(holdTimerRef.current);
-              setFaceStep('DETECTING');
-              setHoldProgress(0);
-          }
-      }
-    }, 100);
+      }, 100);
+    };
+
+    if (mode === 'FACE') {
+        startDetection();
+    }
+
     return () => {
-        clearInterval(interval);
+        if (interval) clearInterval(interval);
         if (holdTimerRef.current) clearInterval(holdTimerRef.current);
     };
-  };
+  }, [mode]);
 
   const checkLiveness = (landmarks: faceapi.FaceLandmarks68, descriptor: Float32Array) => {
     const leftEye = landmarks.getLeftEye();
@@ -190,12 +209,12 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
 
     let passed = false;
 
-    if (challenge === 'BLINK') {
+    if (challengeRef.current === 'BLINK') {
       // Relaxed threshold for better usability
       if (avgEAR < 0.35) { 
          passed = true;
       }
-    } else if (challenge === 'SMILE') {
+    } else if (challengeRef.current === 'SMILE') {
        // Relaxed threshold for better usability
        if (smileRatio > 0.4) { 
           passed = true;
@@ -360,7 +379,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
             autoPlay 
             muted 
             onPlay={handleVideoPlay}
-            className="absolute inset-0 w-full h-full object-cover opacity-80"
+            className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
          />
 
          {/* DEBUG OVERLAY */}
@@ -374,10 +393,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
          )}
          
          {/* Canvas Overlay for Landmarks */}
-         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full scale-x-[-1]" />
 
          {/* Circular Overlay Mask */}
-         <div className="absolute inset-0 bg-slate-900/50 pointer-events-none">
+         <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full border-4 border-cyan-500/50 shadow-[0_0_50px_rgba(6,182,212,0.3)] bg-transparent backdrop-blur-none overflow-hidden">
                 {/* Scanning Line */}
                 {faceStep === 'DETECTING' && (
