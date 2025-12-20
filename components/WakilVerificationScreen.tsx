@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, AlertTriangle, Check, Camera, Fingerprint, FileText, MapPin, User, Loader2, X, Cpu, Database, Search, UserX, Radar, Upload, ScanLine } from 'lucide-react';
+import { Shield, AlertTriangle, Check, Camera, Fingerprint, FileText, MapPin, User, Loader2, X, Cpu, Database, Search, UserX, Radar, Upload, ScanLine, ScanFace } from 'lucide-react';
 import { Beneficiary } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import BiometricVerification from './BiometricVerification';
@@ -114,17 +114,18 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   const handleRepBioVerified = () => {
       setShowRepBioScanner(false);
       setRepScanStage('BIO_SUCCESS');
-  };
 
-  const handleStartLocationCheck = () => {
-    setRepScanStage('LOCATION_CHECK');
-    setCheckingLocation(true);
-    
-    setTimeout(() => {
-      setCheckingLocation(false);
-      setLocationValid(true);
-      setRepScanStage('LOCATION_SUCCESS');
-    }, 2500);
+      // Auto-advance to location check
+      setTimeout(() => {
+        setRepScanStage('LOCATION_CHECK');
+        setCheckingLocation(true);
+        
+        setTimeout(() => {
+          setCheckingLocation(false);
+          setLocationValid(true);
+          setRepScanStage('LOCATION_SUCCESS');
+        }, 2500);
+      }, 1500);
   };
 
   // --- CONSENT FLOW (Full Identity Check) ---
@@ -308,7 +309,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                     {repScanStage === 'READING_CHIP' && "Reading MyKad Chip"}
                     {repScanStage === 'BIO_SCANNING' && "Verifying Representative"}
                     {repScanStage === 'BIO_SUCCESS' && "Representative Verified"}
-                    {repScanStage === 'LOCATION_CHECK' && "Checking Geofence"}
+                    {repScanStage === 'LOCATION_CHECK' && "Verifying Location"}
                     {repScanStage === 'LOCATION_SUCCESS' && "Location Verified"}
                  </h3>
                  <p className="text-gray-500 text-sm mt-1">
@@ -395,7 +396,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                             animate={{ scale: 1, opacity: 1 }}
                             className="relative z-10 w-32 h-32 bg-green-50 rounded-full flex items-center justify-center shadow-xl border-4 border-green-500"
                         >
-                            <Fingerprint size={48} className="text-green-600" />
+                            <ScanFace size={48} className="text-green-600" />
                             <motion.div 
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
@@ -407,13 +408,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         </motion.div>
                     </div>
                     
-                    <button
-                        onClick={handleStartLocationCheck}
-                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-                    >
-                        <MapPin size={20} />
-                        Verify Location
-                    </button>
+                    <p className="text-gray-500 font-medium animate-pulse">Verifying Location...</p>
                 </div>
               )}
 
@@ -464,7 +459,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         <div className="space-y-3">
                             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
                                 <span className="text-gray-500 flex items-center gap-2">
-                                    <Fingerprint size={14} /> Biometrics
+                                    <ScanFace size={14} /> Biometrics
                                 </span>
                                 <span className="text-green-600 font-bold flex items-center gap-1">
                                     <Check size={14} /> Verified
@@ -507,6 +502,28 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                     <h3 className="text-2xl font-bold text-gov-900 mb-2">Proof of Condition</h3>
                     <p className="text-gray-500 mb-8 text-center">Capture photo of pensioner to verify condition</p>
                     
+                    <div className="w-full max-w-md flex gap-4">
+                        <button
+                            onClick={handleCapturePhoto}
+                            className="flex-1 aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-3 hover:bg-white hover:border-purple-500 hover:shadow-md transition-all group"
+                        >
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform border border-gray-100">
+                                <Camera className="text-gray-400 group-hover:text-purple-600" size={24} />
+                            </div>
+                            <p className="text-gray-500 font-bold text-xs group-hover:text-purple-600">Take Photo</p>
+                        </button>
+
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex-1 aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-3 hover:bg-white hover:border-purple-500 hover:shadow-md transition-all group"
+                        >
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform border border-gray-100">
+                                <Upload className="text-gray-400 group-hover:text-purple-600" size={24} />
+                            </div>
+                            <p className="text-gray-500 font-bold text-xs group-hover:text-purple-600">Upload File</p>
+                        </button>
+                    </div>
+
                     <input 
                         type="file" 
                         ref={cameraInputRef}
@@ -516,22 +533,6 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         onChange={handleCameraCapture}
                     />
 
-                    <button
-                        onClick={handleCapturePhoto}
-                        className="w-full max-w-md aspect-video bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-3 hover:bg-gray-50 hover:border-purple-400 transition-all group mb-4"
-                    >
-                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                            <Camera className="text-gray-400 group-hover:text-purple-600" size={32} />
-                        </div>
-                        <p className="text-gray-500 font-medium">Tap to Capture Photo</p>
-                    </button>
-
-                    <div className="w-full max-w-md flex items-center gap-4">
-                        <div className="h-px bg-gray-200 flex-1"></div>
-                        <span className="text-xs text-gray-400 font-bold uppercase">Or</span>
-                        <div className="h-px bg-gray-200 flex-1"></div>
-                    </div>
-
                     <input 
                         type="file" 
                         ref={fileInputRef}
@@ -539,14 +540,6 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         accept="image/*"
                         onChange={handleFileUpload}
                     />
-
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="mt-4 w-full max-w-md py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
-                    >
-                        <Upload size={18} />
-                        Upload Photo
-                    </button>
                  </div>
               ) : (
                  <div className="flex-1 flex flex-col items-center justify-center">
@@ -653,14 +646,14 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                          </div>
                      )}
 
-                     {/* CONSENT: INSERT CARD / READING DATA */}
-                     {(consentStage === 'INSERT_CARD' || consentStage === 'READING_DATA') && (
+                     {/* CONSENT: INSERT CARD */}
+                     {consentStage === 'INSERT_CARD' && (
                          <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
                             <div className="absolute bottom-0 w-56 h-20 bg-gov-900 rounded-t-xl z-20 shadow-2xl border-t border-gray-700 flex justify-center overflow-hidden">
                                 <div className="w-full h-1 bg-black/50 mt-1 absolute top-0"></div>
                                 <div className="absolute top-4 right-6 flex gap-2">
                                     <div className="w-2 h-2 rounded-full bg-red-900"></div>
-                                    <div className={`w-2 h-2 rounded-full ${consentStage === 'READING_DATA' ? 'bg-green-400 animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.8)]' : 'bg-green-900'}`}></div>
+                                    <div className="w-2 h-2 rounded-full bg-green-900"></div>
                                 </div>
                                 <div className="w-32 h-full border-l border-r border-white/5 bg-white/5 mx-auto skew-x-12"></div>
                             </div>
@@ -679,6 +672,44 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                 </div>
                             </motion.div>
                         </div>
+                     )}
+
+                     {/* CONSENT: READING DATA (Secure Chip Animation) */}
+                     {consentStage === 'READING_DATA' && (
+                         <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                             <motion.div 
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                                className="absolute w-56 h-56 border border-dashed border-blue-300 rounded-full opacity-50"
+                             />
+                             <motion.div 
+                                animate={{ rotate: -360 }}
+                                transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                                className="absolute w-48 h-48 border border-dashed border-purple-300 rounded-full opacity-50"
+                             />
+                             
+                             <div className="relative z-10 w-32 h-40 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-2xl border-2 border-yellow-200 flex flex-col items-center justify-center overflow-hidden">
+                                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-30"></div>
+                                 <Cpu size={48} className="text-yellow-900 relative z-10" />
+                                 <div className="mt-2 text-[10px] font-bold text-yellow-900 uppercase tracking-widest relative z-10">Secure Chip</div>
+                                 
+                                 {/* Scanning Line */}
+                                 <motion.div 
+                                    animate={{ top: ['0%', '100%', '0%'] }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                    className="absolute left-0 right-0 h-1 bg-white/50 shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20"
+                                 />
+                             </div>
+
+                             <div className="absolute -bottom-12 flex flex-col items-center gap-2">
+                                 <div className="flex gap-1">
+                                     <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-2 h-2 bg-blue-500 rounded-full" />
+                                     <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-blue-500 rounded-full" />
+                                     <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-blue-500 rounded-full" />
+                                 </div>
+                                 <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Decrypting Data</span>
+                             </div>
+                         </div>
                      )}
 
                      {/* CONSENT: BIO LOCK & SCANNING */}
@@ -840,25 +871,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
         </AnimatePresence>
       </div>
 
-      {/* Progress Bar Footer */}
-      <div className="w-full max-w-sm mx-auto px-8 pb-8 pt-4 space-y-3 text-center shrink-0 relative z-30 bg-white/80 backdrop-blur-sm">
-            <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
-                <span>
-                    {step === 'LEGAL_DECLARATION' ? "Declaration" :
-                     step === 'VERIFY_REP' ? "Verify Rep" :
-                     step === 'EVIDENCE' ? "Consent" : "Contract"}
-                </span>
-                <span>{Math.round(progress)}%</span>
-            </div>
-            <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.5, ease: "circOut" }}
-                    className={`h-full ${step === 'CONTRACT' ? 'bg-green-500' : 'bg-purple-600'}`}
-                />
-            </div>
-      </div>
+      {/* Progress Bar Removed */}
     </div>
   );
 };
