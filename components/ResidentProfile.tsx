@@ -14,7 +14,8 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
   const { t } = useLanguage();
   
   // Logic: Card 2 is locked until Card 1 is completed
-  const isProofOfLifeComplete = beneficiary.completed || false;
+  // We check if serviceCount > 0 (meaning at least one verification done) OR if explicitly marked completed
+  const isProofOfLifeComplete = (beneficiary.serviceCount && beneficiary.serviceCount > 0) || beneficiary.completed || false;
 
   return (
     <motion.div
