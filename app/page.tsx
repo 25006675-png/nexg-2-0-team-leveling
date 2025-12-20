@@ -17,6 +17,8 @@ import { Beneficiary, Kampung, VerificationType } from '../types';
 import { BENEFICIARIES_BY_KAMPUNG } from '../utils/mockData';
 import { OfflineManager } from '../utils/OfflineManager';
 import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
+import { saveVerification } from '../services/OfflineStorage';
+import SyncStatusIndicator from '../components/SyncStatusIndicator';
 
 export type Step = 'login' | 'geo_check' | 'dashboard' | 'resident_profile' | 'verification' | 'wakil_verification' | 'confirmation' | 'success' | 'settings' | 'history';
 
@@ -233,6 +235,9 @@ const AppContent: React.FC = () => {
     ));
     
     saveBeneficiaryToStorage(finalBeneficiary);
+    
+    // Secure Offline Storage (The Vault)
+    saveVerification(finalBeneficiary);
 
     // If online, add directly to history log
     if (!isOffline && selectedKampung) {
@@ -509,6 +514,9 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Global Sync Indicator */}
+      {step !== 'login' && <SyncStatusIndicator />}
     </div>
   );
 };
