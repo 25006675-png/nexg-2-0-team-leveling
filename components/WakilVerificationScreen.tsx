@@ -530,7 +530,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               )}
 
               {/* Footer Progress Bar (Rep Verification) */}
-              {repScanStage !== 'ID_SELECT' && repScanStage !== 'LOCATION_SUCCESS' && (
+              {repScanStage !== 'ID_SELECT' && (
                 <div className="w-full max-w-sm mx-auto px-8 pb-12 space-y-3 text-center shrink-0 mt-auto relative z-30">
                     <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
                         <span>
