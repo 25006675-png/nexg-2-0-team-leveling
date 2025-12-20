@@ -51,6 +51,50 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   const [showConsentBioScanner, setShowConsentBioScanner] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  
+  // Real Camera State
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setIsCameraActive(true);
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      alert("Could not access camera. Please allow camera permissions.");
+    }
+  };
+
+  const stopCamera = () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+          videoRef.current.srcObject = null;
+      }
+      setIsCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+          ctx.drawImage(video, 0, 0);
+          const dataUrl = canvas.toDataURL('image/jpeg');
+          setPhotoPreview(dataUrl);
+          setPhotoCaptured(true);
+          stopCamera();
+      }
+    }
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -179,7 +223,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   };
 
   const handleCapturePhoto = () => {
-    cameraInputRef.current?.click();
+    startCamera();
   };
 
   // Progress Calculation
@@ -326,6 +370,18 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               {/* STAGE: ID SELECT */}
               {repScanStage === 'ID_SELECT' && (
                  <div className="w-full max-w-md px-4 space-y-3">
+                      {/* Progress Bar for Rep Verification */}
+                      <div className="flex items-center justify-center gap-2 mb-6">
+                          <div className={`h-1.5 rounded-full transition-all duration-300 ${['ID_SELECT', 'INSERT_CARD', 'READING_CHIP'].includes(repScanStage) ? 'w-8 bg-purple-600' : 'w-2 bg-gray-200'}`} />
+                          <div className={`h-1.5 rounded-full transition-all duration-300 ${['BIO_SCANNING', 'BIO_SUCCESS'].includes(repScanStage) ? 'w-8 bg-purple-600' : 'w-2 bg-gray-200'}`} />
+                          <div className={`h-1.5 rounded-full transition-all duration-300 ${['LOCATION_CHECK', 'LOCATION_SUCCESS'].includes(repScanStage) ? 'w-8 bg-purple-600' : 'w-2 bg-gray-200'}`} />
+                      </div>
+                      <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider px-8 mb-4">
+                          <span className={['ID_SELECT', 'INSERT_CARD', 'READING_CHIP'].includes(repScanStage) ? 'text-purple-600' : ''}>Scan IC</span>
+                          <span className={['BIO_SCANNING', 'BIO_SUCCESS'].includes(repScanStage) ? 'text-purple-600' : ''}>Biometric</span>
+                          <span className={['LOCATION_CHECK', 'LOCATION_SUCCESS'].includes(repScanStage) ? 'text-purple-600' : ''}>Location</span>
+                      </div>
+
                       {MOCK_REPS.map((rep, idx) => (
                           <button
                               key={idx}
@@ -497,41 +553,56 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               exit={{ opacity: 0, x: -20 }}
               className="flex flex-col min-h-full py-10"
             >
-              {!photoCaptured ? (
-                 <div className="flex-1 flex flex-col items-center justify-center p-6">
+                 <div className="flex-1 flex flex-col items-center p-6">
                     <h3 className="text-2xl font-bold text-gov-900 mb-2">Proof of Condition</h3>
                     <p className="text-gray-500 mb-8 text-center">Capture photo of pensioner to verify condition</p>
                     
-                    <div className="w-full max-w-md flex gap-4">
-                        <button
-                            onClick={handleCapturePhoto}
-                            className="flex-1 aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-3 hover:bg-white hover:border-purple-500 hover:shadow-md transition-all group"
-                        >
-                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform border border-gray-100">
-                                <Camera className="text-gray-400 group-hover:text-purple-600" size={24} />
-                            </div>
-                            <p className="text-gray-500 font-bold text-xs group-hover:text-purple-600">Take Photo</p>
-                        </button>
+                    {/* Camera/Upload Buttons */}
+                    {!isCameraActive && (
+                        <div className="w-full max-w-md flex gap-4 mb-6">
+                            <button
+                                onClick={handleCapturePhoto}
+                                className="flex-1 aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-3 hover:bg-white hover:border-purple-500 hover:shadow-md transition-all group"
+                            >
+                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform border border-gray-100">
+                                    <Camera className="text-gray-400 group-hover:text-purple-600" size={24} />
+                                </div>
+                                <p className="text-gray-500 font-bold text-xs group-hover:text-purple-600">Take Photo</p>
+                            </button>
 
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex-1 aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-3 hover:bg-white hover:border-purple-500 hover:shadow-md transition-all group"
-                        >
-                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform border border-gray-100">
-                                <Upload className="text-gray-400 group-hover:text-purple-600" size={24} />
-                            </div>
-                            <p className="text-gray-500 font-bold text-xs group-hover:text-purple-600">Upload File</p>
-                        </button>
-                    </div>
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="flex-1 aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-3 hover:bg-white hover:border-purple-500 hover:shadow-md transition-all group"
+                            >
+                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform border border-gray-100">
+                                    <Upload className="text-gray-400 group-hover:text-purple-600" size={24} />
+                                </div>
+                                <p className="text-gray-500 font-bold text-xs group-hover:text-purple-600">Upload File</p>
+                            </button>
+                        </div>
+                    )}
 
-                    <input 
-                        type="file" 
-                        ref={cameraInputRef}
-                        className="hidden" 
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleCameraCapture}
-                    />
+                    {/* Real Camera View */}
+                    {isCameraActive && (
+                        <div className="w-full max-w-md mb-6 relative rounded-xl overflow-hidden shadow-lg bg-black">
+                            <video ref={videoRef} autoPlay playsInline className="w-full h-64 object-cover" />
+                            <canvas ref={canvasRef} className="hidden" />
+                            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                                <button 
+                                    onClick={stopCamera}
+                                    className="p-3 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30"
+                                >
+                                    <X size={24} />
+                                </button>
+                                <button 
+                                    onClick={capturePhoto}
+                                    className="p-4 rounded-full bg-white border-4 border-gray-200 shadow-lg active:scale-95 transition-transform"
+                                >
+                                    <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     <input 
                         type="file" 
@@ -540,285 +611,292 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         accept="image/*"
                         onChange={handleFileUpload}
                     />
-                 </div>
-              ) : (
-                 <div className="flex-1 flex flex-col items-center justify-center">
-                     {/* Photo Preview */}
-                     {photoPreview && (
-                         <div className="mb-6 relative">
-                             <img src={photoPreview} alt="Evidence" className="w-48 h-48 object-cover rounded-xl shadow-lg border-4 border-white" />
-                             <button 
-                                onClick={() => {
-                                    setPhotoCaptured(false);
-                                    setPhotoPreview(null);
-                                }}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600"
-                             >
-                                 <X size={16} />
-                             </button>
-                         </div>
-                     )}
 
-                     <div className="mb-8 text-center relative z-10 transition-all duration-300">
-                        <h3 className="text-2xl font-bold text-gov-900">
-                            {consentStage === 'ID_SELECT' && "Pensioner Consent"}
-                            {consentStage === 'JPN_CHECK' && "Verifying Chip Data"}
-                            {consentStage === 'JPN_FAIL' && "ID Mismatch"}
-                            {consentStage === 'INSERT_CARD' && "Secure Connection"}
-                            {consentStage === 'BIO_LOCK' && "Identity Locked"}
-                            {consentStage === 'BIO_SCANNING' && "Verifying Biometrics"}
-                            {consentStage === 'BIO_SUCCESS' && "Consent Verified"}
-                            {consentStage === 'GPS_SCANNING' && "Verifying Location"}
-                            {consentStage === 'GPS_SUCCESS' && "Location Verified"}
-                            {consentStage === 'READING_DATA' && "Signing Contract"}
-                        </h3>
-                        <p className="text-gray-500 text-sm mt-1">
-                            {consentStage === 'ID_SELECT' && "Select Pensioner's MyKad to authorize"}
-                            {consentStage === 'JPN_CHECK' && "Validating secure chip integrity"}
-                            {consentStage === 'JPN_FAIL' && "Scanned ID does not match Pensioner"}
-                            {consentStage === 'INSERT_CARD' && "Establishing secure link with reader"}
-                            {consentStage === 'BIO_LOCK' && "Touch sensor to confirm consent"}
-                            {consentStage === 'BIO_SCANNING' && "Scanning pensioner's thumbprint"}
-                            {consentStage === 'BIO_SUCCESS' && "Biometric consent confirmed"}
-                            {consentStage === 'GPS_SCANNING' && "Ensuring consent at registered address"}
-                            {consentStage === 'GPS_SUCCESS' && "Location matches records"}
-                            {consentStage === 'READING_DATA' && "Cryptographically signing appointment"}
-                        </p>
-                     </div>
-
-                     {/* CONSENT: ID SELECT */}
-                     {consentStage === 'ID_SELECT' && (
-                         <div className="w-full max-w-md px-4 space-y-3">
-                              {consentIcOptions.map((option, idx) => (
-                                  <button
-                                      key={idx}
-                                      onClick={() => handleConsentIdSelect(option)}
-                                      className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all group text-left bg-white shadow-sm"
-                                  >
-                                      <div className="w-12 h-8 bg-gradient-to-br from-blue-200 to-blue-300 rounded-md shadow-sm flex items-center justify-center shrink-0 relative overflow-hidden">
-                                          <div className="absolute top-2 left-2 w-2 h-2 bg-yellow-300 rounded-full opacity-50"></div>
-                                      </div>
-                                      <div className="min-w-0">
-                                          <span className="block font-bold text-sm text-gov-900 group-hover:text-blue-700 truncate">{option.name}</span>
-                                          <span className="block font-mono text-xs text-gray-500">{option.ic}</span>
-                                      </div>
-                                  </button>
-                              ))}
-                          </div>
-                     )}
-
-                     {/* CONSENT: JPN CHECK */}
-                     {consentStage === 'JPN_CHECK' && (
-                         <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                             <motion.div 
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                className="absolute w-48 h-48 border-4 border-blue-100 border-t-blue-500 rounded-full"
-                             />
-                             <motion.div 
-                                animate={{ rotate: -360 }}
-                                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                                className="absolute w-32 h-32 border-4 border-blue-50 border-t-blue-300 rounded-full"
-                             />
-                             <div className="relative z-10 bg-white p-6 rounded-2xl shadow-xl border border-blue-100 flex flex-col items-center">
-                                 <Cpu size={48} className="text-blue-600 mb-2" />
-                                 <div className="flex items-center gap-2 text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1 rounded-full">
-                                     <Search size={12} className="animate-spin" />
-                                     Verifying ID
-                                 </div>
-                             </div>
-                         </div>
-                     )}
-
-                     {/* CONSENT: JPN FAIL */}
-                     {consentStage === 'JPN_FAIL' && (
-                         <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                             <motion.div 
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="w-40 h-40 bg-red-50 rounded-full flex items-center justify-center border-4 border-red-100"
-                             >
-                                 <X size={64} className="text-red-500" />
-                             </motion.div>
-                             <div className="absolute -bottom-10 left-0 right-0 text-center">
-                                 <p className="text-red-600 font-bold">ID Mismatch</p>
-                             </div>
-                         </div>
-                     )}
-
-                     {/* CONSENT: INSERT CARD */}
-                     {consentStage === 'INSERT_CARD' && (
-                         <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                            <div className="absolute bottom-0 w-56 h-20 bg-gov-900 rounded-t-xl z-20 shadow-2xl border-t border-gray-700 flex justify-center overflow-hidden">
-                                <div className="w-full h-1 bg-black/50 mt-1 absolute top-0"></div>
-                                <div className="absolute top-4 right-6 flex gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-red-900"></div>
-                                    <div className="w-2 h-2 rounded-full bg-green-900"></div>
-                                </div>
-                                <div className="w-32 h-full border-l border-r border-white/5 bg-white/5 mx-auto skew-x-12"></div>
-                            </div>
-                            <motion.div 
-                                className="absolute z-10 w-40 h-64 rounded-xl shadow-xl flex flex-col overflow-hidden"
-                                initial={{ y: -100, opacity: 0 }}
-                                animate={{ y: 80, opacity: 1 }}
-                                transition={{ duration: 1.2, type: "spring", bounce: 0.15 }}
-                            >
-                                <div className="w-full h-full bg-gradient-to-br from-blue-700 via-blue-500 to-blue-300 relative border border-white/20">
-                                     <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                                     <div className="absolute top-12 left-1/2 -translate-x-1/2 w-10 h-8 bg-gradient-to-tr from-yellow-600 to-yellow-300 rounded-md border border-yellow-700 shadow-sm flex items-center justify-center">
-                                         <Cpu size={20} className="text-yellow-900 opacity-60" />
-                                     </div>
-                                     <div className="absolute bottom-0 w-full h-16 bg-gradient-to-t from-red-600/20 to-transparent"></div>
-                                </div>
-                            </motion.div>
-                        </div>
-                     )}
-
-                     {/* CONSENT: READING DATA (Secure Chip Animation) */}
-                     {consentStage === 'READING_DATA' && (
-                         <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                             <motion.div 
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                                className="absolute w-56 h-56 border border-dashed border-blue-300 rounded-full opacity-50"
-                             />
-                             <motion.div 
-                                animate={{ rotate: -360 }}
-                                transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-                                className="absolute w-48 h-48 border border-dashed border-purple-300 rounded-full opacity-50"
-                             />
-                             
-                             <div className="relative z-10 w-32 h-40 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-2xl border-2 border-yellow-200 flex flex-col items-center justify-center overflow-hidden">
-                                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-30"></div>
-                                 <Cpu size={48} className="text-yellow-900 relative z-10" />
-                                 <div className="mt-2 text-[10px] font-bold text-yellow-900 uppercase tracking-widest relative z-10">Secure Chip</div>
-                                 
-                                 {/* Scanning Line */}
-                                 <motion.div 
-                                    animate={{ top: ['0%', '100%', '0%'] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                    className="absolute left-0 right-0 h-1 bg-white/50 shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20"
-                                 />
-                             </div>
-
-                             <div className="absolute -bottom-12 flex flex-col items-center gap-2">
-                                 <div className="flex gap-1">
-                                     <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-2 h-2 bg-blue-500 rounded-full" />
-                                     <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-blue-500 rounded-full" />
-                                     <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-blue-500 rounded-full" />
-                                 </div>
-                                 <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Decrypting Data</span>
-                             </div>
-                         </div>
-                     )}
-
-                     {/* CONSENT: BIO LOCK & SCANNING */}
-                     {consentStage === 'BIO_LOCK' && (
-                         <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                             <motion.div 
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="relative"
-                             >
-                                <div className="absolute inset-0 rounded-full blur-xl bg-red-500/20"></div>
+                    {/* Photo Preview (Below Buttons) */}
+                    {photoCaptured && photoPreview && !isCameraActive && (
+                         <div className="mb-8 relative w-full max-w-md">
+                             <div className="relative w-full h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                                <img src={photoPreview} alt="Evidence" className="w-full h-full object-cover" />
                                 <button 
-                                    onClick={handleConsentBioAuth}
-                                    className="w-32 h-32 bg-white rounded-full border-4 flex items-center justify-center shadow-2xl relative z-10 transition-all border-red-100 active:scale-95"
-                                >
-                                    <Fingerprint size={64} className="text-red-500" />
-                                </button>
-                                <div className="absolute -bottom-16 left-0 right-0 text-center">
-                                    <p className="text-xs font-bold text-red-500 animate-pulse uppercase tracking-widest">
-                                        Touch to Consent
-                                    </p>
-                                </div>
-                             </motion.div>
-                         </div>
-                     )}
-
-                     {consentStage === 'BIO_SCANNING' && (
-                         <div className="w-full h-full absolute inset-0 z-50 bg-white">
-                             {showConsentBioScanner && (
-                                 <BiometricVerification 
-                                    onVerified={handleConsentBioVerified}
-                                    onCancel={() => {
-                                        setShowConsentBioScanner(false);
-                                        setConsentStage('BIO_LOCK');
+                                    onClick={() => {
+                                        setPhotoCaptured(false);
+                                        setPhotoPreview(null);
                                     }}
-                                 />
-                             )}
+                                    className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full hover:bg-black/70 backdrop-blur-sm"
+                                >
+                                    <X size={14} />
+                                </button>
+                             </div>
+                             <div className="flex items-center gap-2 mt-2 text-green-600 text-xs font-bold justify-center">
+                                 <Check size={12} /> Photo Captured
+                             </div>
                          </div>
-                     )}
+                    )}
 
-                     {/* CONSENT: BIO SUCCESS */}
-                     {consentStage === 'BIO_SUCCESS' && (
-                        <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                            <motion.div 
-                                initial={{ scale: 0.5, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="relative z-10 w-32 h-32 bg-green-50 rounded-full flex items-center justify-center shadow-xl border-4 border-green-500"
-                            >
-                                <Fingerprint size={48} className="text-green-600" />
-                                <motion.div 
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ delay: 0.2, type: "spring" }}
-                                    className="absolute -top-1 -right-1 text-white p-2 rounded-full border-4 border-white bg-green-500"
-                                >
-                                    <Check size={24} strokeWidth={4} />
-                                </motion.div>
-                            </motion.div>
-                        </div>
-                     )}
+                    {/* Consent Flow (Appears after photo is captured) */}
+                    {photoCaptured && !isCameraActive && (
+                        <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+                             <div className="mb-6 text-center">
+                                <h3 className="text-xl font-bold text-gov-900">
+                                    {consentStage === 'ID_SELECT' && "Pensioner Consent"}
+                                    {consentStage === 'JPN_CHECK' && "Verifying Chip Data"}
+                                    {consentStage === 'JPN_FAIL' && "ID Mismatch"}
+                                    {consentStage === 'INSERT_CARD' && "Secure Connection"}
+                                    {consentStage === 'BIO_LOCK' && "Identity Locked"}
+                                    {consentStage === 'BIO_SCANNING' && "Verifying Biometrics"}
+                                    {consentStage === 'BIO_SUCCESS' && "Consent Verified"}
+                                    {consentStage === 'GPS_SCANNING' && "Verifying Location"}
+                                    {consentStage === 'GPS_SUCCESS' && "Location Verified"}
+                                    {consentStage === 'READING_DATA' && "Signing Contract"}
+                                </h3>
+                                
+                                {/* Progress Bar for Consent Flow */}
+                                <div className="flex items-center justify-center gap-2 mt-3 mb-4">
+                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${['ID_SELECT', 'INSERT_CARD', 'JPN_CHECK'].includes(consentStage) ? 'w-8 bg-blue-600' : 'w-2 bg-gray-200'}`} />
+                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS'].includes(consentStage) ? 'w-8 bg-blue-600' : 'w-2 bg-gray-200'}`} />
+                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${['GPS_SCANNING', 'GPS_SUCCESS', 'READING_DATA'].includes(consentStage) ? 'w-8 bg-blue-600' : 'w-2 bg-gray-200'}`} />
+                                </div>
+                                <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider px-8">
+                                    <span className={['ID_SELECT', 'INSERT_CARD', 'JPN_CHECK'].includes(consentStage) ? 'text-blue-600' : ''}>Scan IC</span>
+                                    <span className={['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS'].includes(consentStage) ? 'text-blue-600' : ''}>Biometric</span>
+                                    <span className={['GPS_SCANNING', 'GPS_SUCCESS', 'READING_DATA'].includes(consentStage) ? 'text-blue-600' : ''}>Location</span>
+                                </div>
+                             </div>
 
-                     {/* CONSENT: GPS SCANNING */}
-                     {consentStage === 'GPS_SCANNING' && (
-                        <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <motion.div 
-                                    animate={{ scale: [1, 1.5, 2], opacity: [0.5, 0.2, 0] }}
-                                    transition={{ repeat: Infinity, duration: 2 }}
-                                    className="absolute w-full h-full border border-blue-500 rounded-full"
-                                />
-                                 <motion.div 
-                                    animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-                                    transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
-                                    className="absolute w-3/4 h-3/4 border border-blue-500 rounded-full"
-                                />
-                            </div>
-                            <motion.div 
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className="relative z-10 w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-xl border-4 border-blue-100"
-                            >
-                                <Radar size={48} className="text-blue-600 animate-spin-slow" />
-                            </motion.div>
-                        </div>
-                     )}
-                     
-                     {/* CONSENT: GPS SUCCESS */}
-                     {consentStage === 'GPS_SUCCESS' && (
-                        <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                            <motion.div 
-                                initial={{ scale: 0.5, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="relative z-10 w-32 h-32 bg-green-50 rounded-full flex items-center justify-center shadow-xl border-4 border-green-500"
-                            >
-                                <MapPin size={48} className="text-green-600" />
-                                <motion.div 
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ delay: 0.2, type: "spring" }}
-                                    className="absolute -top-1 -right-1 bg-green-500 text-white p-2 rounded-full border-4 border-white"
-                                >
-                                    <Check size={24} strokeWidth={4} />
-                                </motion.div>
-                            </motion.div>
-                        </div>
-                     )}
+                             <div className="flex flex-col items-center">
+                                 {/* CONSENT: ID SELECT */}
+                                 {consentStage === 'ID_SELECT' && (
+                                     <div className="w-full space-y-3">
+                                          {consentIcOptions.map((option, idx) => (
+                                              <button
+                                                  key={idx}
+                                                  onClick={() => handleConsentIdSelect(option)}
+                                                  className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all group text-left bg-white shadow-sm"
+                                              >
+                                                  <div className="w-12 h-8 bg-gradient-to-br from-blue-200 to-blue-300 rounded-md shadow-sm flex items-center justify-center shrink-0 relative overflow-hidden">
+                                                      <div className="absolute top-2 left-2 w-2 h-2 bg-yellow-300 rounded-full opacity-50"></div>
+                                                  </div>
+                                                  <div className="min-w-0">
+                                                      <span className="block font-bold text-sm text-gov-900 group-hover:text-blue-700 truncate">{option.name}</span>
+                                                      <span className="block font-mono text-xs text-gray-500">{option.ic}</span>
+                                                  </div>
+                                              </button>
+                                          ))}
+                                      </div>
+                                 )}
 
+                                 {/* CONSENT: JPN CHECK */}
+                                 {consentStage === 'JPN_CHECK' && (
+                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                         <motion.div 
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                            className="absolute w-48 h-48 border-4 border-blue-100 border-t-blue-500 rounded-full"
+                                         />
+                                         <motion.div 
+                                            animate={{ rotate: -360 }}
+                                            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                                            className="absolute w-32 h-32 border-4 border-blue-50 border-t-blue-300 rounded-full"
+                                         />
+                                         <div className="relative z-10 bg-white p-6 rounded-2xl shadow-xl border border-blue-100 flex flex-col items-center">
+                                             <Cpu size={48} className="text-blue-600 mb-2" />
+                                             <div className="flex items-center gap-2 text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1 rounded-full">
+                                                 <Search size={12} className="animate-spin" />
+                                                 Verifying ID
+                                             </div>
+                                         </div>
+                                     </div>
+                                 )}
+
+                                 {/* CONSENT: JPN FAIL */}
+                                 {consentStage === 'JPN_FAIL' && (
+                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                         <motion.div 
+                                            initial={{ scale: 0.8, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="w-40 h-40 bg-red-50 rounded-full flex items-center justify-center border-4 border-red-100"
+                                         >
+                                             <X size={64} className="text-red-500" />
+                                         </motion.div>
+                                         <div className="absolute -bottom-10 left-0 right-0 text-center">
+                                             <p className="text-red-600 font-bold">ID Mismatch</p>
+                                         </div>
+                                     </div>
+                                 )}
+
+                                 {/* CONSENT: INSERT CARD */}
+                                 {consentStage === 'INSERT_CARD' && (
+                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                        <div className="absolute bottom-0 w-56 h-20 bg-gov-900 rounded-t-xl z-20 shadow-2xl border-t border-gray-700 flex justify-center overflow-hidden">
+                                            <div className="w-full h-1 bg-black/50 mt-1 absolute top-0"></div>
+                                            <div className="absolute top-4 right-6 flex gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-red-900"></div>
+                                                <div className="w-2 h-2 rounded-full bg-green-900"></div>
+                                            </div>
+                                            <div className="w-32 h-full border-l border-r border-white/5 bg-white/5 mx-auto skew-x-12"></div>
+                                        </div>
+                                        <motion.div 
+                                            className="absolute z-10 w-40 h-64 rounded-xl shadow-xl flex flex-col overflow-hidden"
+                                            initial={{ y: -100, opacity: 0 }}
+                                            animate={{ y: 80, opacity: 1 }}
+                                            transition={{ duration: 1.2, type: "spring", bounce: 0.15 }}
+                                        >
+                                            <div className="w-full h-full bg-gradient-to-br from-blue-700 via-blue-500 to-blue-300 relative border border-white/20">
+                                                 <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                                                 <div className="absolute top-12 left-1/2 -translate-x-1/2 w-10 h-8 bg-gradient-to-tr from-yellow-600 to-yellow-300 rounded-md border border-yellow-700 shadow-sm flex items-center justify-center">
+                                                     <Cpu size={20} className="text-yellow-900 opacity-60" />
+                                                 </div>
+                                                 <div className="absolute bottom-0 w-full h-16 bg-gradient-to-t from-red-600/20 to-transparent"></div>
+                                            </div>
+                                        </motion.div>
+                                    </div>
+                                 )}
+
+                                 {/* CONSENT: READING DATA (Secure Chip Animation) */}
+                                 {consentStage === 'READING_DATA' && (
+                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                         <motion.div 
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                                            className="absolute w-56 h-56 border border-dashed border-blue-300 rounded-full opacity-50"
+                                         />
+                                         <motion.div 
+                                            animate={{ rotate: -360 }}
+                                            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                                            className="absolute w-48 h-48 border border-dashed border-purple-300 rounded-full opacity-50"
+                                         />
+                                         
+                                         <div className="relative z-10 w-32 h-40 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-2xl border-2 border-yellow-200 flex flex-col items-center justify-center overflow-hidden">
+                                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-30"></div>
+                                             <Cpu size={48} className="text-yellow-900 relative z-10" />
+                                             <div className="mt-2 text-[10px] font-bold text-yellow-900 uppercase tracking-widest relative z-10">Secure Chip</div>
+                                             
+                                             {/* Scanning Line */}
+                                             <motion.div 
+                                                animate={{ top: ['0%', '100%', '0%'] }}
+                                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                                className="absolute left-0 right-0 h-1 bg-white/50 shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20"
+                                             />
+                                         </div>
+
+                                         <div className="absolute -bottom-12 flex flex-col items-center gap-2">
+                                             <div className="flex gap-1">
+                                                 <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-2 h-2 bg-blue-500 rounded-full" />
+                                                 <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-blue-500 rounded-full" />
+                                                 <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-blue-500 rounded-full" />
+                                             </div>
+                                             <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Decrypting Data</span>
+                                         </div>
+                                     </div>
+                                 )}
+
+                                 {/* CONSENT: BIO LOCK & SCANNING */}
+                                 {consentStage === 'BIO_LOCK' && (
+                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                         <motion.div 
+                                            initial={{ scale: 0.8, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="relative"
+                                         />
+                                            <div className="absolute inset-0 rounded-full blur-xl bg-red-500/20"></div>
+                                            <button 
+                                                onClick={handleConsentBioAuth}
+                                                className="w-32 h-32 bg-white rounded-full border-4 flex items-center justify-center shadow-2xl relative z-10 transition-all border-red-100 active:scale-95"
+                                            >
+                                                <Fingerprint size={64} className="text-red-500" />
+                                            </button>
+                                            <div className="absolute -bottom-16 left-0 right-0 text-center">
+                                                <p className="text-xs font-bold text-red-500 animate-pulse uppercase tracking-widest">
+                                                    Touch to Consent
+                                                </p>
+                                            </div>
+                                     </div>
+                                 )}
+
+                                 {consentStage === 'BIO_SCANNING' && (
+                                     <div className="w-full h-full absolute inset-0 z-50 bg-white">
+                                         {showConsentBioScanner && (
+                                             <BiometricVerification 
+                                                onVerified={handleConsentBioVerified}
+                                                onCancel={() => {
+                                                    setShowConsentBioScanner(false);
+                                                    setConsentStage('BIO_LOCK');
+                                                }}
+                                             />
+                                         )}
+                                     </div>
+                                 )}
+
+                                 {/* CONSENT: BIO SUCCESS */}
+                                 {consentStage === 'BIO_SUCCESS' && (
+                                    <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                        <motion.div 
+                                            initial={{ scale: 0.5, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="relative z-10 w-32 h-32 bg-green-50 rounded-full flex items-center justify-center shadow-xl border-4 border-green-500"
+                                        >
+                                            <Fingerprint size={48} className="text-green-600" />
+                                            <motion.div 
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                transition={{ delay: 0.2, type: "spring" }}
+                                                className="absolute -top-1 -right-1 text-white p-2 rounded-full border-4 border-white bg-green-500"
+                                            >
+                                                <Check size={24} strokeWidth={4} />
+                                            </motion.div>
+                                        </motion.div>
+                                    </div>
+                                 )}
+
+                                 {/* CONSENT: GPS SCANNING */}
+                                 {consentStage === 'GPS_SCANNING' && (
+                                    <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <motion.div 
+                                                animate={{ scale: [1, 1.5, 2], opacity: [0.5, 0.2, 0] }}
+                                                transition={{ repeat: Infinity, duration: 2 }}
+                                                className="absolute w-full h-full border border-blue-500 rounded-full"
+                                            />
+                                             <motion.div 
+                                                animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+                                                transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
+                                                className="absolute w-3/4 h-3/4 border border-blue-500 rounded-full"
+                                            />
+                                        </div>
+                                        <motion.div 
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            className="relative z-10 w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-xl border-4 border-blue-100"
+                                        >
+                                            <Radar size={48} className="text-blue-600 animate-spin-slow" />
+                                        </motion.div>
+                                    </div>
+                                 )}
+                                 
+                                 {/* CONSENT: GPS SUCCESS */}
+                                 {consentStage === 'GPS_SUCCESS' && (
+                                    <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                        <motion.div 
+                                            initial={{ scale: 0.5, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="relative z-10 w-32 h-32 bg-green-50 rounded-full flex items-center justify-center shadow-xl border-4 border-green-500"
+                                        >
+                                            <MapPin size={48} className="text-green-600" />
+                                            <motion.div 
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                transition={{ delay: 0.2, type: "spring" }}
+                                                className="absolute -top-1 -right-1 bg-green-500 text-white p-2 rounded-full border-4 border-white"
+                                            >
+                                                <Check size={24} strokeWidth={4} />
+                                            </motion.div>
+                                        </motion.div>
+                                    </div>
+                                 )}
+                             </div>
+                        </div>
+                    )}
                  </div>
-              )}
             </motion.div>
           )}
 
