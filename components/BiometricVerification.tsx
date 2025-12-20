@@ -11,7 +11,7 @@ interface BiometricVerificationProps {
 
 type Mode = 'FINGERPRINT' | 'FACE';
 type FaceStep = 'INIT' | 'LOADING_MODELS' | 'DETECTING' | 'HOLD_STILL' | 'CHALLENGE' | 'VERIFYING' | 'SUCCESS' | 'FAILURE';
-type ChallengeType = 'BLINK' | 'SMILE';
+type ChallengeType = 'BLINK' | 'SMILE' | 'TURN_HEAD';
 
 const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerified, onCancel, referenceImage }) => {
   const [mode, setMode] = useState<Mode>('FINGERPRINT');
@@ -20,7 +20,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
   const [challengeQueue, setChallengeQueue] = useState<ChallengeType[]>([]);
   const [debugMsg, setDebugMsg] = useState<string>('');
   const [holdProgress, setHoldProgress] = useState(0);
-  const [metrics, setMetrics] = useState({ ear: 0, smile: 0 });
+  const [metrics, setMetrics] = useState({ ear: 0, smile: 0, yaw: 0 });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -32,6 +32,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
   const holdProgressRef = useRef(0);
   const faceLostTimerRef = useRef<NodeJS.Timeout | null>(null);
   const challengeSuccessTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const blinkStateRef = useRef<'OPEN' | 'CLOSED'>('OPEN');
   const [challengeSuccess, setChallengeSuccess] = useState(false);
 
   useEffect(() => {
@@ -165,9 +166,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                     setHoldProgress(holdProgressRef.current);
 
                     if (holdProgressRef.current >= 100) {
-                        const q: ChallengeType[] = ['BLINK', 'SMILE'];
+                        const q: ChallengeType[] = ['BLINK', 'SMILE', 'TURN_HEAD'];
                         setChallengeQueue(q);
                         setChallenge(q[0]);
+                        blinkStateRef.current = 'OPEN';
                         
                         // Add a small delay before starting challenge to ensure UI updates
                         setTimeout(() => {
@@ -224,31 +226,55 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
     const leftEye = landmarks.getLeftEye();
     const rightEye = landmarks.getRightEye();
     const mouth = landmarks.getMouth();
+    const nose = landmarks.getNose();
+    const jaw = landmarks.getJawOutline();
 
     const leftEAR = getEAR(leftEye);
     const rightEAR = getEAR(rightEye);
     const avgEAR = (leftEAR + rightEAR) / 2;
 
     const mouthWidth = distance(mouth[0], mouth[6]);
-    const jaw = landmarks.getJawOutline();
     const jawWidth = distance(jaw[0], jaw[16]);
     const smileRatio = mouthWidth / jawWidth;
 
+    // Head Rotation Logic (Yaw)
+    // Compare distance from nose tip (30) to left jaw (0) vs right jaw (16)
+    const noseTip = nose[3];
+    const leftJawEdge = jaw[0];
+    const rightJawEdge = jaw[16];
+    const distToLeft = distance(noseTip, leftJawEdge);
+    const distToRight = distance(noseTip, rightJawEdge);
+    const yawRatio = distToLeft / (distToRight + 0.01); // Avoid div by zero
+
     // Update metrics for debug UI
-    setMetrics({ ear: avgEAR, smile: smileRatio });
+    setMetrics({ ear: avgEAR, smile: smileRatio, yaw: yawRatio });
 
     let passed = false;
 
     if (challengeRef.current === 'BLINK') {
-      // Relaxed threshold for better usability
-      if (avgEAR < 0.30) { // Slightly stricter to prevent auto-pass
-         passed = true;
+      // Stage 1: Robust Blink State Machine
+      // OPEN -> CLOSED -> OPEN
+      if (blinkStateRef.current === 'OPEN') {
+          if (avgEAR < 0.25) {
+              blinkStateRef.current = 'CLOSED';
+          }
+      } else if (blinkStateRef.current === 'CLOSED') {
+          if (avgEAR > 0.35) {
+              blinkStateRef.current = 'OPEN';
+              passed = true;
+          }
       }
     } else if (challengeRef.current === 'SMILE') {
-       // Relaxed threshold for better usability
-       if (smileRatio > 0.4) { 
+       // Stage 2: Smile
+       if (smileRatio > 0.45) { 
           passed = true;
        }
+    } else if (challengeRef.current === 'TURN_HEAD') {
+        // Stage 3: Head Rotation
+        // < 0.5 means looking Left, > 1.5 means looking Right
+        if (yawRatio < 0.5 || yawRatio > 1.5) {
+            passed = true;
+        }
     }
 
     if (passed && !challengeSuccessTimerRef.current) {
@@ -262,6 +288,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
             
             setChallengeSuccess(false);
             challengeSuccessTimerRef.current = null;
+            blinkStateRef.current = 'OPEN'; // Reset for safety
 
             if (nextQ.length > 0) {
                 setChallengeQueue(nextQ);
@@ -382,10 +409,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
 
         <button 
             onClick={() => setMode('FACE')}
-            className="text-sm text-blue-600 font-medium hover:underline flex items-center gap-2 mt-4"
+            className="mt-6 px-5 py-2.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors flex items-center gap-2 border border-blue-200 shadow-sm"
         >
-            <Scan size={16} />
-            Scanner having trouble? Use Facial Verification
+            <Scan size={18} />
+            Unable to scan thumbprint? Use Facial Verification
         </button>
       </div>
     );
@@ -496,13 +523,15 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                             <>
                                 {challenge === 'BLINK' ? (
                                     <Eye className="w-12 h-12 text-yellow-400 mx-auto mb-2" />
-                                ) : (
+                                ) : challenge === 'SMILE' ? (
                                     <Smile className="w-12 h-12 text-yellow-400 mx-auto mb-2" />
+                                ) : (
+                                    <RefreshCw className="w-12 h-12 text-yellow-400 mx-auto mb-2" />
                                 )}
                                 <h3 className="text-3xl font-bold text-yellow-400 mb-1 uppercase tracking-wider">
-                                    {challenge === 'BLINK' ? "PLEASE BLINK" : "PLEASE SMILE"}
+                                    {challenge === 'BLINK' ? "PLEASE BLINK" : challenge === 'SMILE' ? "PLEASE SMILE" : "SLOWLY TURN HEAD"}
                                 </h3>
-                                <p className="text-white/80 text-sm">Liveness Check {challengeQueue.length + 1}/2</p>
+                                <p className="text-white/80 text-sm">Liveness Check {3 - challengeQueue.length + 1}/3</p>
                                 {/* Face Lost Warning */}
                                 {metrics.ear === 0 && metrics.smile === 0 && (
                                     <p className="text-red-400 text-xs mt-2 animate-pulse">Face not detected - Keep position</p>
