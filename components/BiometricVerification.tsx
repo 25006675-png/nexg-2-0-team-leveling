@@ -484,8 +484,6 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                         )}
                     </motion.div>
                 )}
-                    </motion.div>
-                )}
 
                 {faceStep === 'VERIFYING' && (
                     <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
