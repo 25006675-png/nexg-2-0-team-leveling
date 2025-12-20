@@ -207,7 +207,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
         } catch (e) {
             console.error("Detection error", e);
         }
-      }, 100);
+      }, 50); // Faster detection for blinks
     };
 
     if (mode === 'FACE') {
@@ -254,12 +254,13 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
     if (challengeRef.current === 'BLINK') {
       // Stage 1: Robust Blink State Machine
       // OPEN -> CLOSED -> OPEN
+      // Relaxed thresholds: < 0.30 for closed, > 0.30 for open
       if (blinkStateRef.current === 'OPEN') {
-          if (avgEAR < 0.25) {
+          if (avgEAR < 0.30) {
               blinkStateRef.current = 'CLOSED';
           }
       } else if (blinkStateRef.current === 'CLOSED') {
-          if (avgEAR > 0.35) {
+          if (avgEAR > 0.30) {
               blinkStateRef.current = 'OPEN';
               passed = true;
           }
@@ -448,8 +449,9 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
          {/* DEBUG OVERLAY */}
          {metrics && (
             <div className="absolute top-2 left-2 z-50 bg-black/60 p-2 rounded text-[10px] font-mono text-green-400 pointer-events-none">
-                <p>EAR: {metrics.ear.toFixed(3)} (Thresh: &lt;0.35)</p>
-                <p>Smile: {metrics.smile.toFixed(3)} (Thresh: &gt;0.40)</p>
+                <p>EAR: {metrics.ear.toFixed(3)} (Thresh: &lt;0.30)</p>
+                <p>Smile: {metrics.smile.toFixed(3)} (Thresh: &gt;0.45)</p>
+                <p>Yaw: {metrics.yaw ? metrics.yaw.toFixed(2) : '0.00'}</p>
                 <p>State: {faceStep}</p>
                 <p>Challenge: {challenge || 'None'}</p>
             </div>
