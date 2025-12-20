@@ -31,6 +31,8 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
   const challengeRef = useRef<ChallengeType>('BLINK');
   const holdProgressRef = useRef(0);
   const faceLostTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const challengeSuccessTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [challengeSuccess, setChallengeSuccess] = useState(false);
 
   useEffect(() => {
       challengeRef.current = challenge;
@@ -209,6 +211,8 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
     return () => {
         if (interval) clearInterval(interval);
         if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+        if (faceLostTimerRef.current) clearTimeout(faceLostTimerRef.current);
+        if (challengeSuccessTimerRef.current) clearTimeout(challengeSuccessTimerRef.current);
     };
   }, [mode]);
 
@@ -233,7 +237,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
 
     if (challengeRef.current === 'BLINK') {
       // Relaxed threshold for better usability
-      if (avgEAR < 0.35) { 
+      if (avgEAR < 0.30) { // Slightly stricter to prevent auto-pass
          passed = true;
       }
     } else if (challengeRef.current === 'SMILE') {
@@ -243,18 +247,25 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
        }
     }
 
-    if (passed) {
-        // Move to next challenge or verify
-        const currentQ = challengeQueueRef.current;
-        const nextQ = currentQ.slice(1);
+    if (passed && !challengeSuccessTimerRef.current) {
+        // Show success feedback
+        setChallengeSuccess(true);
         
-        if (nextQ.length > 0) {
-            setChallengeQueue(nextQ);
-            setChallenge(nextQ[0]);
-            // Stay in CHALLENGE state, just update UI
-        } else {
-            verifyIdentity(descriptor);
-        }
+        challengeSuccessTimerRef.current = setTimeout(() => {
+            // Move to next challenge or verify
+            const currentQ = challengeQueueRef.current;
+            const nextQ = currentQ.slice(1);
+            
+            setChallengeSuccess(false);
+            challengeSuccessTimerRef.current = null;
+
+            if (nextQ.length > 0) {
+                setChallengeQueue(nextQ);
+                setChallenge(nextQ[0]);
+            } else {
+                verifyIdentity(descriptor);
+            }
+        }, 1000); // 1 second delay for feedback
     }
   };
 
@@ -469,18 +480,29 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
 
                 {faceStep === 'CHALLENGE' && (
                     <motion.div key="challenge" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-                        {challenge === 'BLINK' ? (
-                            <Eye className="w-12 h-12 text-yellow-400 mx-auto mb-2" />
+                        {challengeSuccess ? (
+                            <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                                <Check className="w-16 h-16 text-green-400 mx-auto mb-2" />
+                                <h3 className="text-3xl font-bold text-green-400 mb-1 uppercase tracking-wider">
+                                    GREAT!
+                                </h3>
+                            </motion.div>
                         ) : (
-                            <Smile className="w-12 h-12 text-yellow-400 mx-auto mb-2" />
-                        )}
-                        <h3 className="text-3xl font-bold text-yellow-400 mb-1 uppercase tracking-wider">
-                            {challenge === 'BLINK' ? "PLEASE BLINK" : "PLEASE SMILE"}
-                        </h3>
-                        <p className="text-white/80 text-sm">Liveness Check {challengeQueue.length + 1}/2</p>
-                        {/* Face Lost Warning */}
-                        {metrics.ear === 0 && metrics.smile === 0 && (
-                             <p className="text-red-400 text-xs mt-2 animate-pulse">Face not detected - Keep position</p>
+                            <>
+                                {challenge === 'BLINK' ? (
+                                    <Eye className="w-12 h-12 text-yellow-400 mx-auto mb-2" />
+                                ) : (
+                                    <Smile className="w-12 h-12 text-yellow-400 mx-auto mb-2" />
+                                )}
+                                <h3 className="text-3xl font-bold text-yellow-400 mb-1 uppercase tracking-wider">
+                                    {challenge === 'BLINK' ? "PLEASE BLINK" : "PLEASE SMILE"}
+                                </h3>
+                                <p className="text-white/80 text-sm">Liveness Check {challengeQueue.length + 1}/2</p>
+                                {/* Face Lost Warning */}
+                                {metrics.ear === 0 && metrics.smile === 0 && (
+                                    <p className="text-red-400 text-xs mt-2 animate-pulse">Face not detected - Keep position</p>
+                                )}
+                            </>
                         )}
                     </motion.div>
                 )}
