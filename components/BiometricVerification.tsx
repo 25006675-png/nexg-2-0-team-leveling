@@ -29,6 +29,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const challengeQueueRef = useRef<ChallengeType[]>([]);
   const challengeRef = useRef<ChallengeType>('BLINK');
+  const holdProgressRef = useRef(0);
 
   useEffect(() => {
       challengeRef.current = challenge;
@@ -147,31 +148,36 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                     faceStepRef.current = 'HOLD_STILL';
                     setFaceStep('HOLD_STILL');
                     setHoldProgress(0);
+                    holdProgressRef.current = 0;
+                } else if (faceStepRef.current === 'HOLD_STILL') {
+                    // Increment progress
+                    holdProgressRef.current += 20; 
+                    if (holdProgressRef.current > 100) holdProgressRef.current = 100;
+                    setHoldProgress(holdProgressRef.current);
 
-                    let progress = 0;
-                    const holdInterval = setInterval(() => {
-                        progress += 10;
-                        setHoldProgress(progress);
-                        if (progress >= 100) {
-                            clearInterval(holdInterval);
-                            const q: ChallengeType[] = ['BLINK', 'SMILE'];
-                            setChallengeQueue(q);
-                            setChallenge(q[0]);
-                            faceStepRef.current = 'CHALLENGE';
-                            setFaceStep('CHALLENGE');
-                        }
-                    }, 200);
-                    holdTimerRef.current = holdInterval;
+                    if (holdProgressRef.current >= 100) {
+                        const q: ChallengeType[] = ['BLINK', 'SMILE'];
+                        setChallengeQueue(q);
+                        setChallenge(q[0]);
+                        faceStepRef.current = 'CHALLENGE';
+                        setFaceStep('CHALLENGE');
+                    }
                 } else if (faceStepRef.current === 'CHALLENGE') {
                     checkLiveness(landmarks, detection.descriptor);
                 }
             } else {
                 // Face lost
                 if (faceStepRef.current === 'HOLD_STILL') {
-                    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
-                    setFaceStep('DETECTING');
-                    setHoldProgress(0);
-                    faceStepRef.current = 'DETECTING';
+                    // Decay progress instead of reset
+                    holdProgressRef.current -= 10;
+                    if (holdProgressRef.current < 0) holdProgressRef.current = 0;
+                    setHoldProgress(holdProgressRef.current);
+                    
+                    // Only reset if progress hits 0
+                    if (holdProgressRef.current === 0) {
+                        setFaceStep('DETECTING');
+                        faceStepRef.current = 'DETECTING';
+                    }
                 }
             }
         } catch (e) {
