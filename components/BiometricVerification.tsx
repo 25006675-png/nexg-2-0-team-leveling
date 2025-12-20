@@ -168,8 +168,12 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                         const q: ChallengeType[] = ['BLINK', 'SMILE'];
                         setChallengeQueue(q);
                         setChallenge(q[0]);
-                        faceStepRef.current = 'CHALLENGE';
-                        setFaceStep('CHALLENGE');
+                        
+                        // Add a small delay before starting challenge to ensure UI updates
+                        setTimeout(() => {
+                            faceStepRef.current = 'CHALLENGE';
+                            setFaceStep('CHALLENGE');
+                        }, 500);
                     }
                 } else if (faceStepRef.current === 'CHALLENGE') {
                     checkLiveness(landmarks, detection.descriptor);
@@ -326,10 +330,27 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
   if (mode === 'FINGERPRINT') {
     return (
       <div className="flex flex-col items-center justify-center h-full w-full p-6">
-        <div className="relative w-64 h-64 flex items-center justify-center mb-8">
-            {/* Fingerprint Scanner UI */}
-            <div className={`w-48 h-48 rounded-full border-4 flex items-center justify-center relative overflow-hidden ${fingerprintScanning ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
-                <Fingerprint size={80} className={fingerprintScanning ? 'text-green-600' : 'text-gray-400'} />
+        
+        <h3 className="text-xl font-bold text-gray-900 mb-2">
+            {fingerprintScanning ? "Verifying Biometrics..." : "Place Thumb on Scanner"}
+        </h3>
+        <p className="text-gray-500 text-center mb-4 max-w-xs text-sm">
+            Please place your right thumb on the biometric reader to verify identity.
+        </p>
+
+        {!fingerprintScanning && (
+            <button 
+                onClick={startFingerprintScan}
+                className="w-full max-w-xs bg-gov-900 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-gov-800 transition-all mb-8"
+            >
+                Start Scan
+            </button>
+        )}
+
+        <div className="relative w-64 h-64 flex items-center justify-center mb-4 shrink-0">
+            {/* Fingerprint Scanner UI - Matched to Success Screen Size (w-32 h-32) */}
+            <div className={`w-32 h-32 rounded-full border-4 flex items-center justify-center relative overflow-hidden ${fingerprintScanning ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                <Fingerprint size={48} className={fingerprintScanning ? 'text-green-600' : 'text-gray-400'} />
                 
                 {/* Scanning Laser */}
                 {fingerprintScanning && (
@@ -358,22 +379,6 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                 </>
             )}
         </div>
-
-        <h3 className="text-xl font-bold text-gray-900 mb-2">
-            {fingerprintScanning ? "Verifying Biometrics..." : "Place Thumb on Scanner"}
-        </h3>
-        <p className="text-gray-500 text-center mb-8 max-w-xs">
-            Please place your right thumb on the biometric reader to verify identity.
-        </p>
-
-        {!fingerprintScanning && (
-            <button 
-                onClick={startFingerprintScan}
-                className="w-full max-w-xs bg-gov-900 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-gov-800 transition-all mb-4"
-            >
-                Start Scan
-            </button>
-        )}
 
         <button 
             onClick={() => setMode('FACE')}

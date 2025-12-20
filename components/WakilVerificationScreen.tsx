@@ -524,7 +524,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                      <div className="mb-8 text-center relative z-10 transition-all duration-300">
                         <h3 className="text-2xl font-bold text-gov-900">
                             {consentStage === 'ID_SELECT' && "Pensioner Consent"}
-                            {consentStage === 'JPN_CHECK' && "Verifying ID Match"}
+                            {consentStage === 'JPN_CHECK' && "Verifying Chip Data"}
                             {consentStage === 'JPN_FAIL' && "ID Mismatch"}
                             {consentStage === 'INSERT_CARD' && "Secure Connection"}
                             {consentStage === 'BIO_LOCK' && "Identity Locked"}
@@ -536,7 +536,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         </h3>
                         <p className="text-gray-500 text-sm mt-1">
                             {consentStage === 'ID_SELECT' && "Select Pensioner's MyKad to authorize"}
-                            {consentStage === 'JPN_CHECK' && "Checking if ID matches Pensioner record"}
+                            {consentStage === 'JPN_CHECK' && "Validating secure chip integrity"}
                             {consentStage === 'JPN_FAIL' && "Scanned ID does not match Pensioner"}
                             {consentStage === 'INSERT_CARD' && "Establishing secure link with reader"}
                             {consentStage === 'BIO_LOCK' && "Touch sensor to confirm consent"}
@@ -583,7 +583,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                 className="absolute w-32 h-32 border-4 border-blue-50 border-t-blue-300 rounded-full"
                              />
                              <div className="relative z-10 bg-white p-6 rounded-2xl shadow-xl border border-blue-100 flex flex-col items-center">
-                                 <Database size={48} className="text-blue-600 mb-2" />
+                                 <Cpu size={48} className="text-blue-600 mb-2" />
                                  <div className="flex items-center gap-2 text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1 rounded-full">
                                      <Search size={12} className="animate-spin" />
                                      Verifying ID

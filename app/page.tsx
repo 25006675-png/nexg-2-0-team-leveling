@@ -304,7 +304,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-200 flex items-center justify-center p-0 md:p-6 font-sans">
-      <div className="w-full h-[100dvh] md:h-auto md:min-h-[700px] md:max-w-6xl bg-white md:rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative border border-gray-200">
+      <div className="w-full h-[100dvh] md:h-[calc(100vh-3rem)] md:max-w-6xl bg-white md:rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative border border-gray-200">
         
         {/* TABLET SIDEBAR */}
         <aside className="hidden md:flex flex-col w-80 bg-gov-900 text-white p-8 justify-between shrink-0 relative overflow-hidden">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cpu, ChevronLeft, Check, Fingerprint, MapPin, AlertCircle, UserX, Home, AlertTriangle, ScanLine, Radar, Building2, Users, CreditCard, X, Database, Search } from 'lucide-react';
+import { Cpu, ChevronLeft, Check, Fingerprint, MapPin, AlertCircle, UserX, Home, AlertTriangle, ScanLine, Radar, Building2, Users, CreditCard, X, Database, Search, Lock, Unlock, FileText } from 'lucide-react';
 import { Beneficiary, VerificationType } from '../types';
 import { OfflineManager } from '../utils/OfflineManager';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -300,7 +300,7 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                             className="absolute w-32 h-32 border-4 border-blue-50 border-t-blue-300 rounded-full"
                          />
                          <div className="relative z-10 bg-white p-6 rounded-2xl shadow-xl border border-blue-100 flex flex-col items-center">
-                             <Database size={48} className="text-blue-600 mb-2" />
+                             <Cpu size={48} className="text-blue-600 mb-2" />
                              <div className="flex items-center gap-2 text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1 rounded-full">
                                  <Search size={12} className="animate-spin" />
                                  {t.verification.jpnLink}
@@ -325,14 +325,14 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                      </div>
                  )}
 
-                 {/* STAGE 1 & 5: CARD READER / DATA */}
-                 {(scanStage === 'INSERT_CARD' || scanStage === 'READING_DATA') && (
+                 {/* STAGE 1: CARD READER */}
+                 {scanStage === 'INSERT_CARD' && (
                      <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-20">
                         <div className="absolute bottom-0 w-56 h-20 bg-gov-900 rounded-t-xl z-20 shadow-2xl border-t border-gray-700 flex justify-center overflow-hidden">
                             <div className="w-full h-1 bg-black/50 mt-1 absolute top-0"></div>
                             <div className="absolute top-4 right-6 flex gap-2">
                                 <div className="w-2 h-2 rounded-full bg-red-900"></div>
-                                <div className={`w-2 h-2 rounded-full ${scanStage === 'READING_DATA' ? 'bg-green-400 animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.8)]' : 'bg-green-900'}`}></div>
+                                <div className="w-2 h-2 rounded-full bg-green-900"></div>
                             </div>
                             <div className="w-32 h-full border-l border-r border-white/5 bg-white/5 mx-auto skew-x-12"></div>
                         </div>
@@ -447,6 +447,94 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                         <div className="absolute -bottom-16 left-0 right-0 text-center">
                              <p className="text-xs font-bold text-green-600 uppercase tracking-widest">{t.verification.locationMatched}</p>
                              <p className="text-[10px] text-green-600/70 font-mono mt-1">lat: 3.1415, long: 101.6869</p>
+                         </div>
+                    </div>
+                 )}
+
+                 {/* STAGE 6: READING DATA (DECRYPTION) */}
+                 {scanStage === 'READING_DATA' && (
+                    <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-20">
+                        {/* Spinning Matrix Rings */}
+                        <motion.div 
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                            className="absolute w-56 h-56 border border-dashed border-cyan-300 rounded-full opacity-50"
+                        />
+                        <motion.div 
+                            animate={{ rotate: -360 }}
+                            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                            className="absolute w-48 h-48 border-2 border-cyan-100 border-t-cyan-500 rounded-full"
+                        />
+                        
+                        {/* Central Lock Animation */}
+                        <div className="relative z-10 flex flex-col items-center justify-center">
+                            <motion.div 
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="w-24 h-24 bg-white rounded-2xl shadow-xl border border-cyan-100 flex items-center justify-center mb-4 relative overflow-hidden"
+                            >
+                                <motion.div 
+                                    className="absolute inset-0 bg-cyan-50"
+                                    initial={{ height: "0%" }}
+                                    animate={{ height: "100%" }}
+                                    transition={{ duration: 2.5, ease: "easeInOut" }}
+                                />
+                                <div className="relative z-10">
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key="lock"
+                                            initial={{ opacity: 1 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0, scale: 0.5 }}
+                                            transition={{ duration: 0.5 }}
+                                        >
+                                            <motion.div
+                                                animate={{ 
+                                                    y: [0, -2, 0],
+                                                    color: ["#64748b", "#06b6d4"] 
+                                                }}
+                                                transition={{ duration: 1, repeat: Infinity }}
+                                            >
+                                                <Unlock size={40} className="text-cyan-600" />
+                                            </motion.div>
+                                        </motion.div>
+                                    </AnimatePresence>
+                                </div>
+                            </motion.div>
+                            
+                            {/* Floating Data Particles */}
+                            <div className="absolute inset-0 pointer-events-none">
+                                {[...Array(6)].map((_, i) => (
+                                    <motion.div
+                                        key={i}
+                                        className="absolute left-1/2 top-1/2"
+                                        initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                                        animate={{ 
+                                            x: (Math.random() - 0.5) * 150, 
+                                            y: (Math.random() - 0.5) * 150, 
+                                            opacity: [0, 1, 0],
+                                            scale: [0, 1, 0]
+                                        }}
+                                        transition={{ 
+                                            duration: 2, 
+                                            repeat: Infinity, 
+                                            delay: i * 0.3,
+                                            ease: "easeOut"
+                                        }}
+                                    >
+                                        <FileText size={12} className="text-cyan-400" />
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="absolute -bottom-16 left-0 right-0 text-center">
+                             <p className="text-xs font-bold text-cyan-600 uppercase tracking-widest animate-pulse">
+                                 Decrypting Secure Payload...
+                             </p>
+                             <p className="text-[10px] text-cyan-600/70 font-mono mt-1">
+                                 AES-256 • Biometric Key • GPS Salt
+                             </p>
                          </div>
                     </div>
                  )}
