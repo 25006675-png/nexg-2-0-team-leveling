@@ -3,14 +3,17 @@ import { Beneficiary } from '../types';
 const QUEUE_KEY = 'pencen_offline_queue';
 const HISTORY_KEY = 'pencen_history';
 
+export type TransactionType = 'PROOF_OF_LIFE' | 'WAKIL_APPOINTMENT';
+
 export interface PendingSubmission {
   beneficiaryId: string;
   kampungId: string;
   timestamp: number;
-  data: Partial<Beneficiary>;
+  data: Partial<Beneficiary> & { wakilName?: string; wakilIc?: string };
   token: string;
   referenceId: string;
   syncedAt?: string;
+  type: TransactionType;
 }
 
 export const OfflineManager = {
@@ -20,7 +23,7 @@ export const OfflineManager = {
     return stored ? JSON.parse(stored) : [];
   },
 
-  addToQueue: (beneficiary: Beneficiary, kampungId: string, referenceId?: string) => {
+  addToQueue: (beneficiary: Beneficiary, kampungId: string, type: TransactionType = 'PROOF_OF_LIFE', referenceId?: string, wakilData?: { name: string; ic: string }) => {
     const queue = OfflineManager.getQueue();
     const token = OfflineManager.generateToken(beneficiary.ic);
     const refId = referenceId || OfflineManager.generateReferenceId(beneficiary.ic);
@@ -29,9 +32,10 @@ export const OfflineManager = {
       beneficiaryId: beneficiary.ic,
       kampungId: kampungId,
       timestamp: Date.now(),
-      data: beneficiary,
+      data: { ...beneficiary, ...(wakilData ? { wakilName: wakilData.name, wakilIc: wakilData.ic } : {}) },
       token: token,
-      referenceId: refId
+      referenceId: refId,
+      type: type
     };
 
     queue.push(submission);
@@ -77,7 +81,7 @@ export const OfflineManager = {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
   },
 
-  addOnlineVerificationToHistory: (beneficiary: Beneficiary, kampungId: string, referenceId: string) => {
+  addOnlineVerificationToHistory: (beneficiary: Beneficiary, kampungId: string, referenceId: string, type: TransactionType = 'PROOF_OF_LIFE', wakilData?: { name: string; ic: string }) => {
       const history = OfflineManager.getHistory();
       const token = OfflineManager.generateToken(beneficiary.ic);
       
@@ -85,10 +89,11 @@ export const OfflineManager = {
           beneficiaryId: beneficiary.ic,
           kampungId: kampungId,
           timestamp: Date.now(),
-          data: beneficiary,
+          data: { ...beneficiary, ...(wakilData ? { wakilName: wakilData.name, wakilIc: wakilData.ic } : {}) },
           token: token,
           referenceId: referenceId,
-          syncedAt: new Date().toISOString() // Immediately synced
+          syncedAt: new Date().toISOString(), // Immediately synced
+          type: type
       };
 
       const updatedHistory = [submission, ...history];

@@ -5,40 +5,37 @@ import { Beneficiary, VerificationType } from '../types';
 import { OfflineManager } from '../utils/OfflineManager';
 import { useLanguage } from '../contexts/LanguageContext';
 import BiometricVerification from './BiometricVerification';
+import VerificationStages, { ScanStage as SharedScanStage } from './VerificationStages';
 
 interface VerificationScreenProps {
   onScanComplete: (type: VerificationType) => void;
   beneficiary: Beneficiary;
   beneficiaries: Beneficiary[]; // Add this
   onBack: () => void;
+  verificationLocation: VerificationType;
 }
 
-type ScanStage = 'PRE_SCAN' | 'ID_SELECT' | 'JPN_CHECK' | 'JPN_FAIL' | 'INSERT_CARD' | 'BIO_LOCK' | 'BIO_SCANNING' | 'BIO_SUCCESS' | 'BIO_FAILED' | 'GPS_SCANNING' | 'GPS_SUCCESS' | 'READING_DATA';
+type ScanStage = 'ID_SELECT' | 'JPN_CHECK' | 'JPN_FAIL' | 'INSERT_CARD' | 'BIO_LOCK' | 'BIO_SCANNING' | 'BIO_SUCCESS' | 'BIO_FAILED' | 'GPS_SCANNING' | 'GPS_SUCCESS' | 'READING_DATA';
 type ExceptionReason = 'DECEASED' | 'NOT_AT_HOME' | 'DAMAGED_ID' | null;
 
-const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete, beneficiary, beneficiaries, onBack }) => {
+const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete, beneficiary, beneficiaries, onBack, verificationLocation }) => {
   const { t } = useLanguage();
-  const [scanStage, setScanStage] = useState<ScanStage>('PRE_SCAN');
+  const [scanStage, setScanStage] = useState<ScanStage>('ID_SELECT');
   const [showExceptionMenu, setShowExceptionMenu] = useState(false);
-  const [verificationLocation, setVerificationLocation] = useState<VerificationType | null>(null);
   
   // ID Selection State
   const [icOptions, setIcOptions] = useState<Beneficiary[]>([]);
   const [selectedIcBeneficiary, setSelectedIcBeneficiary] = useState<Beneficiary | null>(null);
 
-  // --- NAVIGATION & FLOW ---
-
-  const handleModeSelect = (type: VerificationType) => {
-    setVerificationLocation(type);
-    
-    // Prepare ID options
+  useEffect(() => {
+    // Prepare ID options on mount
     const others = beneficiaries.filter(b => b.ic !== beneficiary.ic);
     const shuffledOthers = others.sort(() => Math.random() - 0.5).slice(0, 3);
     const options = [beneficiary, ...shuffledOthers].sort(() => Math.random() - 0.5);
     setIcOptions(options);
+  }, [beneficiary, beneficiaries]);
 
-    setScanStage('ID_SELECT');
-  };
+  // --- NAVIGATION & FLOW ---
 
   const handleIdSelect = (selected: Beneficiary) => {
       setSelectedIcBeneficiary(selected);
@@ -69,6 +66,9 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
 
   const handleBiometricAuth = () => {
       setScanStage('BIO_SCANNING');
+      setTimeout(() => {
+          handleBiometricSuccess();
+      }, 2000);
   };
 
   const handleBiometricSuccess = () => {
@@ -121,116 +121,22 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
           </button>
       </div>
 
-      {/* --- PRE-SCAN INTERFACE: MODE SELECTION --- */}
-      {scanStage === 'PRE_SCAN' && (
-           <div className="flex-1 flex flex-col items-center justify-center bg-white md:bg-transparent rounded-3xl h-full relative">
-               <div className="w-full max-w-sm space-y-6">
-                   <div className="text-center mb-2">
-                       <div className="relative inline-block">
-                           <img src={beneficiary.photoUrl} className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg bg-gray-200" alt="Profile" />
-                       </div>
-                       <h2 className="text-xl font-bold text-gov-900 mt-2">{beneficiary.name}</h2>
-                       <p className="text-gray-500 font-mono text-xs">{beneficiary.ic}</p>
-                   </div>
-                   
-                   <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-2">
-                       <div className="flex items-start gap-2">
-                           <MapPin size={14} className="text-gov-700 mt-0.5 shrink-0" />
-                           <p className="text-xs text-gray-700 font-medium leading-relaxed">{beneficiary.address}</p>
-                       </div>
-                   </div>
-
-                   <div className="space-y-4 pt-2">
-                       <div className="flex items-center gap-3">
-                           <div className="h-px bg-gray-200 flex-1"></div>
-                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t.verification.selectProtocol}</span>
-                           <div className="h-px bg-gray-200 flex-1"></div>
-                       </div>
-
-                       <div className="grid grid-cols-1 gap-3">
-                           {/* MODE A: COMMUNITY HALL */}
-                           <button 
-                             onClick={() => handleModeSelect('HALL')}
-                             className="relative w-full p-4 bg-white border-2 border-blue-100 rounded-xl hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 transition-all text-left group overflow-hidden"
-                           >
-                               <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                   <Building2 size={64} className="text-blue-900" />
-                               </div>
-                               <div className="flex items-start gap-3 relative z-10">
-                                   <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
-                                       <Users size={20} />
-                                   </div>
-                                   <div>
-                                       <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-0.5 block">{t.verification.modeA}</span>
-                                       <h3 className="font-bold text-gov-900 text-lg leading-tight">{t.verification.communityHall}</h3>
-                                       <p className="text-xs text-gray-500 mt-1 leading-snug">{t.verification.hallDesc}</p>
-                                   </div>
-                               </div>
-                           </button>
-
-                           {/* MODE B: HOME VISIT */}
-                           <button 
-                             onClick={() => handleModeSelect('HOME')}
-                             className="relative w-full p-4 bg-white border-2 border-orange-100 rounded-xl hover:border-orange-500 hover:shadow-lg hover:shadow-orange-500/10 transition-all text-left group overflow-hidden"
-                           >
-                               <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                   <Home size={64} className="text-orange-900" />
-                               </div>
-                               <div className="flex items-start gap-3 relative z-10">
-                                   <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors shrink-0">
-                                       <Home size={20} />
-                                   </div>
-                                   <div>
-                                       <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-0.5 block">{t.verification.modeB}</span>
-                                       <h3 className="font-bold text-gov-900 text-lg leading-tight">{t.verification.homeVisit}</h3>
-                                       <p className="text-xs text-gray-500 mt-1 leading-snug">{t.verification.homeDesc}</p>
-                                   </div>
-                               </div>
-                           </button>
-                       </div>
-
-                       <div className="relative pt-2">
-                            <button 
-                                onClick={() => setShowExceptionMenu(!showExceptionMenu)}
-                                className="w-full py-2 text-xs text-gray-400 font-bold hover:text-red-600 transition-colors flex items-center justify-center gap-2"
-                            >
-                                <AlertCircle size={14} />
-                                {t.verification.reportIssue}
-                            </button>
-                            
-                            <AnimatePresence>
-                                {showExceptionMenu && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20"
-                                    >
-                                        <div className="p-2 space-y-1">
-                                            <button onClick={() => handleException('DECEASED')} className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-700 rounded-lg flex items-center gap-3 transition-colors">
-                                                <UserX size={16} />
-                                                <span className="text-xs font-bold">{t.verification.deceased}</span>
-                                            </button>
-                                            <button onClick={() => handleException('NOT_AT_HOME')} className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-700 rounded-lg flex items-center gap-3 transition-colors">
-                                                <Home size={16} />
-                                                <span className="text-xs font-medium">{t.verification.notAtHome}</span>
-                                            </button>
-                                            <button onClick={() => handleException('DAMAGED_ID')} className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-700 rounded-lg flex items-center gap-3 transition-colors">
-                                                <AlertTriangle size={16} />
-                                                <span className="text-xs font-medium">{t.verification.damagedId}</span>
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                       </div>
-                   </div>
-               </div>
-           </div>
-      )}
-
       {/* --- READER INTERFACE (Animation Stages) --- */}
-      {scanStage !== 'PRE_SCAN' && (
+      {['INSERT_CARD', 'BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS', 'BIO_FAILED', 'GPS_SCANNING', 'GPS_SUCCESS', 'READING_DATA'].includes(scanStage) ? (
+             <VerificationStages 
+                stage={scanStage as SharedScanStage} 
+                locationType={verificationLocation}
+                onBioAuth={handleBiometricAuth}
+                enableFaceScan={true}
+                referenceImage={selectedIcBeneficiary?.photoUrl}
+                stepLabel={
+                    scanStage === 'INSERT_CARD' ? "Step 1" :
+                    ['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS', 'BIO_FAILED'].includes(scanStage) ? "Step 2" :
+                    ['GPS_SCANNING', 'GPS_SUCCESS'].includes(scanStage) ? "Step 3" :
+                    scanStage === 'READING_DATA' ? "Secure" : undefined
+                }
+             />
+        ) : (
          <div className="flex-1 flex flex-col bg-white md:bg-transparent h-full relative">
              <div className="flex-1 flex flex-col items-center justify-center w-full">
                  
@@ -553,14 +459,14 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                          scanStage === 'GPS_SUCCESS' ? t.verification.success : t.verification.accessingJpn}
                     </span>
                     <span>
-                        {scanStage === 'ID_SELECT' ? t.verification.step1 :
-                         scanStage === 'INSERT_CARD' ? t.verification.step2 :
-                         scanStage === 'JPN_CHECK' ? t.verification.step2 :
+                        {scanStage === 'ID_SELECT' ? "Step 1" :
+                         scanStage === 'INSERT_CARD' ? "Step 1" :
+                         scanStage === 'JPN_CHECK' ? "Step 1" :
                          scanStage === 'JPN_FAIL' ? t.verification.error :
-                         scanStage === 'BIO_LOCK' || scanStage === 'BIO_SCANNING' ? t.verification.step3 : 
-                         scanStage === 'BIO_SUCCESS' ? t.verification.step3 :
-                         scanStage === 'GPS_SCANNING' ? t.verification.step4 : 
-                         scanStage === 'GPS_SUCCESS' ? t.verification.step4 : t.verification.complete}
+                         scanStage === 'BIO_LOCK' || scanStage === 'BIO_SCANNING' ? "Step 2" : 
+                         scanStage === 'BIO_SUCCESS' ? "Step 2" :
+                         scanStage === 'GPS_SCANNING' ? "Step 3" : 
+                         scanStage === 'GPS_SUCCESS' ? "Step 3" : t.verification.secure}
                     </span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
@@ -599,7 +505,8 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                 </div>
             </div>
          </div>
-      )}
+        )
+      }
     </motion.div>
   );
 };

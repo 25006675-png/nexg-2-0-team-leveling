@@ -1,20 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Scan, Shield, AlertTriangle, Check, RefreshCw, Eye, Smile, User, Fingerprint, X } from 'lucide-react';
+import { Camera, Scan, Shield, AlertTriangle, Check, RefreshCw, Eye, Smile, User, Fingerprint, X, ScanFace } from 'lucide-react';
 import * as faceapi from 'face-api.js';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface BiometricVerificationProps {
   onVerified: () => void;
   onCancel: () => void;
   referenceImage?: string; // Base64 string of the chip photo
+  initialMode?: 'FINGERPRINT' | 'FACE';
 }
 
 type Mode = 'FINGERPRINT' | 'FACE';
 type FaceStep = 'INIT' | 'LOADING_MODELS' | 'DETECTING' | 'HOLD_STILL' | 'CHALLENGE' | 'VERIFYING' | 'SUCCESS' | 'FAILURE';
 type ChallengeType = 'BLINK' | 'SMILE' | 'TURN_HEAD';
 
-const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerified, onCancel, referenceImage }) => {
-  const [mode, setMode] = useState<Mode>('FINGERPRINT');
+const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerified, onCancel, referenceImage, initialMode = 'FINGERPRINT' }) => {
+  const { t } = useLanguage();
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [faceStep, setFaceStep] = useState<FaceStep>('INIT');
   const [challenge, setChallenge] = useState<ChallengeType>('BLINK');
   const [challengeQueue, setChallengeQueue] = useState<ChallengeType[]>([]);
@@ -360,10 +363,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
       <div className="flex flex-col items-center justify-center h-full w-full p-6">
         
         <h3 className="text-xl font-bold text-gray-900 mb-2">
-            {fingerprintScanning ? "Verifying Biometrics..." : "Place Thumb on Scanner"}
+            {fingerprintScanning ? t.verification.verifyingBiometrics : t.verification.bioRequired}
         </h3>
         <p className="text-gray-500 text-center mb-4 max-w-xs text-sm">
-            Please place your right thumb on the biometric reader to verify identity.
+            {fingerprintScanning ? t.verification.bioScanningDesc : t.verification.bioInstruction}
         </p>
 
         {!fingerprintScanning && (
@@ -371,7 +374,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
                 onClick={startFingerprintScan}
                 className="w-full max-w-xs bg-gov-900 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-gov-800 transition-all mb-8"
             >
-                Start Scan
+                {t.verification.scanMyKad}
             </button>
         )}
 
@@ -410,10 +413,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
 
         <button 
             onClick={() => setMode('FACE')}
-            className="mt-6 px-5 py-2.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors flex items-center gap-2 border border-blue-200 shadow-sm"
+            className="text-sm font-semibold text-gov-700 hover:text-gov-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-full transition-all flex items-center gap-2 mt-6 shadow-sm"
         >
-            <Scan size={18} />
-            Unable to scan thumbprint? Use Facial Verification
+            <ScanFace size={18} />
+            {t.verification.useFaceVerification}
         </button>
       </div>
     );
@@ -429,7 +432,16 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
             <Shield size={20} />
             <span className="font-mono text-xs font-bold tracking-widest uppercase">Gov-ID Secure</span>
          </div>
-         <button onClick={() => setMode('FINGERPRINT')} className="p-2 bg-white/10 rounded-full hover:bg-white/20">
+         <button 
+            onClick={() => {
+                if (initialMode === 'FINGERPRINT' && mode === 'FACE') {
+                    setMode('FINGERPRINT');
+                } else {
+                    onCancel();
+                }
+            }} 
+            className="p-2 bg-white/10 rounded-full hover:bg-white/20"
+         >
             <X size={20} />
          </button>
       </div>

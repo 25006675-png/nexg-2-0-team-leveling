@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Clock, CheckCircle2, FileText, X, WifiOff, Trash2 } from 'lucide-react';
+import { ChevronLeft, Clock, CheckCircle2, FileText, X, WifiOff, Trash2, Shield } from 'lucide-react';
 import { OfflineManager, PendingSubmission } from '../utils/OfflineManager';
 import { Beneficiary } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -66,12 +66,20 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack, kampungId }) => {
                         className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between hover:bg-gray-50 cursor-pointer transition-colors"
                       >
                           <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-full bg-gov-100 flex items-center justify-center text-gov-700 font-bold text-xs">
-                                  {item.data.name?.substring(0, 2).toUpperCase()}
-                              </div>
+                              {item.type === 'WAKIL_APPOINTMENT' ? (
+                                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700">
+                                      <Shield size={20} />
+                                  </div>
+                              ) : (
+                                  <div className="w-10 h-10 rounded-full bg-gov-100 flex items-center justify-center text-gov-700 font-bold text-xs">
+                                      {item.data.name?.substring(0, 2).toUpperCase()}
+                                  </div>
+                              )}
                               <div>
                                   <h3 className="font-bold text-gov-900 text-sm">{item.data.name}</h3>
-                                  <p className="text-xs text-gray-500">{formatDate(item.timestamp)} • {formatTime(item.timestamp)}</p>
+                                  <p className="text-xs text-gray-500">
+                                      {item.type === 'WAKIL_APPOINTMENT' ? 'Wakil Appointment' : 'Proof of Life'} • {formatTime(item.timestamp)}
+                                  </p>
                               </div>
                           </div>
                           
@@ -130,6 +138,14 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack, kampungId }) => {
                               <span className="text-gray-500 text-sm">{t.history.referenceId}</span>
                               <span className="font-mono font-bold text-sm">{selectedItem.referenceId || t.history.na}</span>
                           </div>
+                          
+                          {selectedItem.type === 'WAKIL_APPOINTMENT' && (
+                              <div className="flex justify-between bg-purple-50 p-2 rounded-lg">
+                                  <span className="text-purple-700 text-sm font-bold">Appointed Wakil</span>
+                                  <span className="font-bold text-sm text-right text-purple-900">{selectedItem.data.wakilName}</span>
+                              </div>
+                          )}
+
                           <div className="flex justify-between">
                               <span className="text-gray-500 text-sm">{t.history.beneficiary}</span>
                               <span className="font-bold text-sm text-right">{selectedItem.data.name}</span>

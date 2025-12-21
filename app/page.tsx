@@ -2,11 +2,12 @@
 // Force rebuild
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { LogOut, Battery, Signal, Shield, Check, ChevronLeft, MapPin, Settings, FileText } from 'lucide-react';
+import { LogOut, Battery, Signal, Shield, Check, ChevronLeft, MapPin, Settings, FileText, Users } from 'lucide-react';
 import LoginScreen from '../components/LoginScreen';
 import AgentGeoCheck from '../components/AgentGeoCheck';
 import DashboardScreen from '../components/DashboardScreen';
 import ResidentProfile from '../components/ResidentProfile';
+import ModeSelectionScreen from '../components/ModeSelectionScreen';
 import VerificationScreen from '../components/ScanScreen';
 import WakilVerificationScreen, { WakilStep } from '../components/WakilVerificationScreen';
 import ConfirmationScreen from '../components/VerifyScreen';
@@ -20,12 +21,13 @@ import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 import { saveVerification } from '../services/OfflineStorage';
 import SyncStatusIndicator from '../components/SyncStatusIndicator';
 
-export type Step = 'login' | 'geo_check' | 'dashboard' | 'resident_profile' | 'verification' | 'wakil_verification' | 'confirmation' | 'success' | 'settings' | 'history';
+export type Step = 'login' | 'geo_check' | 'dashboard' | 'resident_profile' | 'mode_selection' | 'verification' | 'wakil_verification' | 'confirmation' | 'success' | 'settings' | 'history';
 
 const AppContent: React.FC = () => {
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>('login');
   const [verificationMode, setVerificationMode] = useState<'standard' | 'wakil' | null>(null);
+  const [verificationLocation, setVerificationLocation] = useState<VerificationType>('HOME');
   const [wakilInternalStep, setWakilInternalStep] = useState<WakilStep>('LEGAL_DECLARATION');
   const [agentId, setAgentId] = useState('KK-0012-P');
   const [selectedKampung, setSelectedKampung] = useState<Kampung | null>(null);
@@ -143,8 +145,11 @@ const AppContent: React.FC = () => {
         setSelectedBeneficiary(null);
         setVerificationMode(null);
         break;
-      case 'verification':
+      case 'mode_selection':
         setStep('resident_profile');
+        break;
+      case 'verification':
+        setStep('mode_selection');
         break;
       case 'wakil_verification':
         setStep('resident_profile');
@@ -177,10 +182,15 @@ const AppContent: React.FC = () => {
   const handleModeSelect = (mode: 'standard' | 'wakil') => {
     setVerificationMode(mode);
     if (mode === 'standard') {
-      setStep('verification');
+      setStep('mode_selection');
     } else {
       setStep('wakil_verification');
     }
+  };
+
+  const handleVerificationLocationSelect = (type: VerificationType) => {
+      setVerificationLocation(type);
+      setStep('verification');
   };
 
   const handleVerificationComplete = (type: VerificationType) => {
@@ -266,28 +276,30 @@ const AppContent: React.FC = () => {
   };
 
   // Dynamic Steps Calculation
-  let currentSteps: string[] = ['login', 'geo_check', 'dashboard'];
+  let currentSteps: string[] = [];
   if (verificationMode === 'standard') {
-      currentSteps = [...currentSteps, 'verification', 'confirmation', 'success'];
+      currentSteps = ['mode_selection', 'verification', 'confirmation', 'success'];
   } else if (verificationMode === 'wakil') {
-      currentSteps = [...currentSteps, 'wakil_verify', 'wakil_evidence', 'wakil_contract'];
+      currentSteps = ['wakil_verify', 'wakil_evidence', 'wakil_consent', 'wakil_contract'];
   } else if (step === 'resident_profile') {
-      currentSteps = [...currentSteps, 'resident_profile'];
+      currentSteps = [];
   } else if (step === 'verification' || step === 'confirmation' || step === 'success') {
       // Fallback if mode is lost but step is advanced (shouldn't happen with proper state)
-      currentSteps = [...currentSteps, 'verification', 'confirmation', 'success'];
+      currentSteps = ['mode_selection', 'verification', 'confirmation', 'success'];
   }
 
   const stepLabels: Record<string, string> = {
     login: t.steps.login,
     geo_check: t.steps.geo_check,
-    dashboard: t.steps.dashboard,
+    dashboard: "Dashboard",
     resident_profile: "Resident Profile",
-    verification: t.steps.verification,
+    mode_selection: "Mode Selection",
+    verification: "Identity Check",
     confirmation: t.steps.confirmation,
     success: t.steps.success,
     wakil_verify: "Verify Representative",
-    wakil_evidence: "Evidence & Consent",
+    wakil_evidence: "Evidence",
+    wakil_consent: "Pensioner Consent",
     wakil_contract: "Digital Contract",
     settings: t.steps.settings,
     history: t.steps.history
@@ -334,6 +346,15 @@ const AppContent: React.FC = () => {
                       </div>
                       
                       <nav className="space-y-0">
+                          {verificationMode && (
+                              <div className="mb-4 px-4 py-2 bg-white/10 rounded-lg border border-white/5">
+                                  <p className="text-[10px] text-blue-200 uppercase tracking-widest font-bold mb-1">Service Mode</p>
+                                  <p className="font-bold text-sm text-white">
+                                      {verificationMode === 'standard' ? 'Biometric Proof of Life' : 'Assign One-Time Wakil'}
+                                  </p>
+                              </div>
+                          )}
+
                           {currentSteps.map((s, idx) => {
                               // Calculate active index based on mode
                               let activeIndex = currentSteps.indexOf(step);
@@ -342,6 +363,7 @@ const AppContent: React.FC = () => {
                               if (verificationMode === 'wakil' && step === 'wakil_verification') {
                                   if (wakilInternalStep === 'LEGAL_DECLARATION' || wakilInternalStep === 'VERIFY_REP') activeIndex = currentSteps.indexOf('wakil_verify');
                                   else if (wakilInternalStep === 'EVIDENCE') activeIndex = currentSteps.indexOf('wakil_evidence');
+                                  else if (wakilInternalStep === 'PENSIONER_CONSENT') activeIndex = currentSteps.indexOf('wakil_consent');
                                   else if (wakilInternalStep === 'CONTRACT') activeIndex = currentSteps.indexOf('wakil_contract');
                               }
 
@@ -350,7 +372,10 @@ const AppContent: React.FC = () => {
                               const isPast = activeIndex > thisIdx;
                               
                               return (
-                                  <div key={s} className="flex gap-4 relative group">
+                                  <div 
+                                    key={s} 
+                                    className={`flex gap-4 relative group`}
+                                  >
                                       {idx !== currentSteps.length - 1 && (
                                         <div className={`absolute left-4 top-8 bottom-[-8px] w-0.5 ${isPast ? 'bg-blue-500' : 'bg-slate-700'}`} />
                                       )}
@@ -372,6 +397,18 @@ const AppContent: React.FC = () => {
             <div className="z-10 relative space-y-2">
                  {step !== 'login' && (
                     <>
+                        <button 
+                            onClick={() => {
+                                if ((step as string) !== 'login' && (step as string) !== 'geo_check') {
+                                    setStep('dashboard');
+                                    setVerificationMode(null);
+                                    setSelectedBeneficiary(null);
+                                }
+                            }}
+                            className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'dashboard' || step === 'resident_profile' ? 'bg-white text-gov-900 shadow-lg shadow-black/10' : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'}`}
+                        >
+                            <Users size={18} className={step === 'dashboard' || step === 'resident_profile' ? 'text-gov-900' : 'text-yellow-400'} /> Dashboard
+                        </button>
                         <button onClick={() => handleNavToAux('history')} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'history' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
                             <FileText size={18} /> {t.common.history}
                         </button>
@@ -452,13 +489,29 @@ const AppContent: React.FC = () => {
                       onBack={handleBack}
                     />
                   )}
-                  {step === 'wakil_verification' && selectedBeneficiary && (
+                  {step === 'wakil_verification' && selectedBeneficiary && selectedKampung && (
                     <WakilVerificationScreen
                       key="wakil_verification"
                       beneficiary={selectedBeneficiary}
                       onComplete={handleWakilComplete}
                       onBack={handleBack}
                       onStepChange={setWakilInternalStep}
+                      kampungId={selectedKampung.id}
+                    />
+                  )}
+                  {step === 'mode_selection' && selectedBeneficiary && (
+                    <ModeSelectionScreen
+                      key="mode_selection"
+                      beneficiary={selectedBeneficiary}
+                      onSelectMode={handleVerificationLocationSelect}
+                      onException={(reason) => {
+                         if (reason === 'NOT_AT_HOME') {
+                             handleBack();
+                         } else {
+                             handleVerificationLocationSelect('HOME');
+                         }
+                      }}
+                      onBack={handleBack}
                     />
                   )}
                   {step === 'verification' && selectedBeneficiary && (
@@ -468,6 +521,7 @@ const AppContent: React.FC = () => {
                       beneficiaries={beneficiaries}
                       onScanComplete={handleVerificationComplete} 
                       onBack={handleBack}
+                      verificationLocation={verificationLocation}
                     />
                   )}
                   {step === 'confirmation' && selectedBeneficiary && selectedKampung && (

@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, AlertTriangle, Check, Camera, Fingerprint, FileText, MapPin, User, Loader2, X, Cpu, Database, Search, UserX, Radar, Upload, ScanLine, ScanFace } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { Shield, AlertTriangle, Check, Camera, Fingerprint, FileText, MapPin, User, Loader2, X, Cpu, Database, Search, UserX, Radar, Upload, ScanLine, ScanFace, ChevronLeft } from 'lucide-react';
 import { Beneficiary } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import BiometricVerification from './BiometricVerification';
+import VerificationStages, { ScanStage } from './VerificationStages';
+import { OfflineManager } from '../utils/OfflineManager';
 
-export type WakilStep = 'LEGAL_DECLARATION' | 'VERIFY_REP' | 'EVIDENCE' | 'CONTRACT';
+export type WakilStep = 'LEGAL_DECLARATION' | 'VERIFY_REP' | 'EVIDENCE' | 'PENSIONER_CONSENT' | 'CONTRACT';
 
 interface WakilVerificationScreenProps {
   beneficiary: Beneficiary;
   onComplete: (repName: string) => void;
   onBack: () => void;
   onStepChange?: (step: WakilStep) => void;
+  kampungId: string;
 }
 
 // Mock Reps
@@ -22,7 +26,7 @@ const MOCK_REPS = [
   { name: 'Muthu A/L Sami', ic: '820303-08-5533' }
 ];
 
-const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ beneficiary, onComplete, onBack, onStepChange }) => {
+const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ beneficiary, onComplete, onBack, onStepChange, kampungId }) => {
   const { t } = useLanguage();
   const [step, setStep] = useState<WakilStep>('LEGAL_DECLARATION');
 
@@ -36,7 +40,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   const [acceptedLiability, setAcceptedLiability] = useState(false);
 
   // Verify Rep State
-  const [repScanStage, setRepScanStage] = useState<'ID_SELECT' | 'INSERT_CARD' | 'READING_CHIP' | 'BIO_SCANNING' | 'BIO_SUCCESS' | 'LOCATION_CHECK' | 'LOCATION_SUCCESS'>('ID_SELECT');
+  const [repScanStage, setRepScanStage] = useState<'ID_SELECT' | ScanStage | 'REP_CONFIRMED'>('ID_SELECT');
   const [repData, setRepData] = useState<{ name: string; ic: string } | null>(null);
   const [checkingLocation, setCheckingLocation] = useState(false);
   const [locationValid, setLocationValid] = useState(false);
@@ -49,6 +53,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   const [consentIcOptions, setConsentIcOptions] = useState<Beneficiary[]>([]);
   const [isSigning, setIsSigning] = useState(false);
   const [showConsentBioScanner, setShowConsentBioScanner] = useState(false);
+  const [consentStarted, setConsentStarted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   
@@ -143,16 +148,14 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   // --- REP VERIFICATION FLOW ---
   const handleRepSelect = (rep: { name: string; ic: string }) => {
     setRepData(rep);
-    setRepScanStage('INSERT_CARD');
-    
-    // 1. Insert Card -> Reading Chip (No JPN Check)
-    setTimeout(() => {
-      setRepScanStage('READING_CHIP');
+    setRepScanStage('BIO_LOCK');
+  };
+
+  const handleRepBioAuth = () => {
+      setRepScanStage('BIO_SCANNING');
       setTimeout(() => {
-        setRepScanStage('BIO_SCANNING');
-        setShowRepBioScanner(true);
+          handleRepBioVerified();
       }, 2000);
-    }, 1500);
   };
 
   const handleRepBioVerified = () => {
@@ -161,13 +164,20 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
 
       // Auto-advance to location check
       setTimeout(() => {
-        setRepScanStage('LOCATION_CHECK');
+        setRepScanStage('GPS_SCANNING');
         setCheckingLocation(true);
         
         setTimeout(() => {
           setCheckingLocation(false);
           setLocationValid(true);
-          setRepScanStage('LOCATION_SUCCESS');
+          setRepScanStage('GPS_SUCCESS');
+          
+          setTimeout(() => {
+              setRepScanStage('READING_DATA');
+              setTimeout(() => {
+                  setRepScanStage('REP_CONFIRMED');
+              }, 2000);
+          }, 1500);
         }, 2500);
       }, 1500);
   };
@@ -194,7 +204,9 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
 
   const handleConsentBioAuth = () => {
     setConsentStage('BIO_SCANNING');
-    setShowConsentBioScanner(true);
+    setTimeout(() => {
+        handleConsentBioVerified();
+    }, 2000);
   };
 
   const handleConsentBioVerified = () => {
@@ -215,6 +227,17 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                setTimeout(() => {
                  setIsSigning(false);
                  setStep('CONTRACT');
+                 
+                 // Silent Save
+                 if (repData) {
+                     OfflineManager.addToQueue(
+                         beneficiary,
+                         kampungId,
+                         'WAKIL_APPOINTMENT',
+                         undefined,
+                         { name: repData.name, ic: repData.ic }
+                     );
+                 }
                }, 2000);
             }, 2000);
           }, 2000);
@@ -225,43 +248,6 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   const handleCapturePhoto = () => {
     startCamera();
   };
-
-  // Progress Calculation
-  const getProgress = () => {
-    if (step === 'LEGAL_DECLARATION') return 10;
-    if (step === 'VERIFY_REP') {
-      switch (repScanStage) {
-        case 'ID_SELECT': return 20;
-        case 'INSERT_CARD': return 30;
-        case 'READING_CHIP': return 35;
-        case 'BIO_SCANNING': return 40;
-        case 'BIO_SUCCESS': return 45;
-        case 'LOCATION_CHECK': return 50;
-        case 'LOCATION_SUCCESS': return 55;
-        default: return 20;
-      }
-    }
-    if (step === 'EVIDENCE') {
-      if (!photoCaptured) return 55;
-      switch (consentStage) {
-        case 'ID_SELECT': return 60;
-        case 'INSERT_CARD': return 65;
-        case 'JPN_CHECK': return 70;
-        case 'JPN_FAIL': return 70;
-        case 'BIO_LOCK': return 75;
-        case 'BIO_SCANNING': return 80;
-        case 'BIO_SUCCESS': return 85;
-        case 'GPS_SCANNING': return 90;
-        case 'GPS_SUCCESS': return 95;
-        case 'READING_DATA': return 98;
-        default: return 60;
-      }
-    }
-    if (step === 'CONTRACT') return 100;
-    return 0;
-  };
-
-  const progress = getProgress();
 
   return (
     <div className="h-full flex flex-col relative">
@@ -344,233 +330,93 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex flex-col items-center justify-center min-h-full py-10"
+              className="flex flex-col items-center justify-center min-h-full py-10 w-full"
             >
-              <div className="mb-8 text-center">
-                 <h3 className="text-2xl font-bold text-gov-900">
-                    {repScanStage === 'ID_SELECT' && "Select Representative"}
-                    {repScanStage === 'INSERT_CARD' && "Secure Connection"}
-                    {repScanStage === 'READING_CHIP' && "Reading MyKad Chip"}
-                    {repScanStage === 'BIO_SCANNING' && "Verifying Representative"}
-                    {repScanStage === 'BIO_SUCCESS' && "Representative Verified"}
-                    {repScanStage === 'LOCATION_CHECK' && "Verifying Location"}
-                    {repScanStage === 'LOCATION_SUCCESS' && "Location Verified"}
-                 </h3>
-                 <p className="text-gray-500 text-sm mt-1">
-                    {repScanStage === 'ID_SELECT' && "Select the representative's MyKad to scan"}
-                    {repScanStage === 'INSERT_CARD' && "Establishing secure link with reader"}
-                    {repScanStage === 'READING_CHIP' && "Accessing public data from chip"}
-                    {repScanStage === 'BIO_SCANNING' && "Scanning representative's thumbprint"}
-                    {repScanStage === 'BIO_SUCCESS' && "Identity confirmed via MyKad chip"}
-                    {repScanStage === 'LOCATION_CHECK' && "Verifying proximity to pensioner's home"}
-                    {repScanStage === 'LOCATION_SUCCESS' && "Inside authorized zone"}
-                 </p>
-              </div>
-
-              {/* STAGE: ID SELECT */}
-              {repScanStage === 'ID_SELECT' && (
-                 <div className="w-full max-w-md px-4 space-y-3">
-                      {MOCK_REPS.map((rep, idx) => (
-                          <button
-                              key={idx}
-                              onClick={() => handleRepSelect(rep)}
-                              className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-purple-500 hover:bg-purple-50 transition-all group text-left bg-white shadow-sm"
-                          >
-                              <div className="w-12 h-8 bg-gradient-to-br from-purple-200 to-purple-300 rounded-md shadow-sm flex items-center justify-center shrink-0 relative overflow-hidden">
-                                  <div className="absolute top-2 left-2 w-2 h-2 bg-white rounded-full opacity-50"></div>
-                              </div>
-                              <div className="min-w-0">
-                                  <span className="block font-bold text-sm text-gov-900 group-hover:text-purple-700 truncate">{rep.name}</span>
-                                  <span className="block font-mono text-xs text-gray-500">{rep.ic}</span>
-                              </div>
-                          </button>
-                      ))}
-                  </div>
-              )}
-
-              {/* STAGE: INSERT CARD / READING CHIP */}
-              {(repScanStage === 'INSERT_CARD' || repScanStage === 'READING_CHIP') && (
-                 <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                    <div className="absolute bottom-0 w-56 h-20 bg-gov-900 rounded-t-xl z-20 shadow-2xl border-t border-gray-700 flex justify-center overflow-hidden">
-                        <div className="w-full h-1 bg-black/50 mt-1 absolute top-0"></div>
-                        <div className="absolute top-4 right-6 flex gap-2">
-                            <div className="w-2 h-2 rounded-full bg-red-900"></div>
-                            <div className={`w-2 h-2 rounded-full ${repScanStage === 'READING_CHIP' ? 'bg-green-400 animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.8)]' : 'bg-green-900'}`}></div>
-                        </div>
-                        <div className="w-32 h-full border-l border-r border-white/5 bg-white/5 mx-auto skew-x-12"></div>
+              {repScanStage === 'ID_SELECT' ? (
+                <>
+                  <div className="flex-1 flex flex-col items-center justify-center w-full">
+                    <div className="mb-8 text-center">
+                        <h3 className="text-2xl font-bold text-gov-900">Select Representative</h3>
+                        <p className="text-gray-500 text-sm mt-1">Select the representative's MyKad to scan</p>
                     </div>
-                    <motion.div 
-                        className="absolute z-10 w-40 h-64 rounded-xl shadow-xl flex flex-col overflow-hidden"
-                        initial={{ y: -100, opacity: 0 }}
-                        animate={{ y: 80, opacity: 1 }}
-                        transition={{ duration: 1.2, type: "spring", bounce: 0.15 }}
-                    >
-                        <div className="w-full h-full bg-gradient-to-br from-purple-700 via-purple-500 to-purple-300 relative border border-white/20">
-                             <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                             <div className="absolute top-12 left-1/2 -translate-x-1/2 w-10 h-8 bg-gradient-to-tr from-yellow-600 to-yellow-300 rounded-md border border-yellow-700 shadow-sm flex items-center justify-center">
-                                 <Cpu size={20} className="text-yellow-900 opacity-60" />
-                             </div>
-                             <div className="absolute bottom-0 w-full h-16 bg-gradient-to-t from-red-600/20 to-transparent"></div>
-                        </div>
-                    </motion.div>
-                </div>
-              )}
-
-              {/* STAGE: BIO SCANNING (Using BiometricVerification Component) */}
-              {repScanStage === 'BIO_SCANNING' && (
-                 <div className="w-full h-full absolute inset-0 z-50 bg-white">
-                     {showRepBioScanner && (
-                         <BiometricVerification 
-                            onVerified={handleRepBioVerified}
-                            onCancel={() => {
-                                setShowRepBioScanner(false);
-                                setRepScanStage('ID_SELECT');
-                            }}
-                         />
-                     )}
-                 </div>
-              )}
-
-              {/* STAGE: BIO SUCCESS (WAITING FOR LOCATION) */}
-              {repScanStage === 'BIO_SUCCESS' && (
-                <div className="flex flex-col items-center gap-6 w-full max-w-md">
-                    <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
-                        <motion.div 
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="relative z-10 w-32 h-32 bg-green-50 rounded-full flex items-center justify-center shadow-xl border-4 border-green-500"
-                        >
-                            <ScanFace size={48} className="text-green-600" />
-                            <motion.div 
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ delay: 0.2, type: "spring" }}
-                                className="absolute -top-1 -right-1 text-white p-2 rounded-full border-4 border-white bg-green-500"
+                    <div className="w-full max-w-md px-4 space-y-3">
+                        {MOCK_REPS.map((rep, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => handleRepSelect(rep)}
+                                className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-purple-500 hover:bg-purple-50 transition-all group text-left bg-white shadow-sm"
                             >
-                                <Check size={24} strokeWidth={4} />
-                            </motion.div>
-                        </motion.div>
+                                <div className="w-12 h-8 bg-gradient-to-br from-purple-200 to-purple-300 rounded-md shadow-sm flex items-center justify-center shrink-0 relative overflow-hidden">
+                                    <div className="absolute top-2 left-2 w-2 h-2 bg-white rounded-full opacity-50"></div>
+                                </div>
+                                <div className="min-w-0">
+                                    <span className="block font-bold text-sm text-gov-900 group-hover:text-purple-700 truncate">{rep.name}</span>
+                                    <span className="block font-mono text-xs text-gray-500">{rep.ic}</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                  </div>
+                  
+                  {/* Footer Progress Bar for Wakil Selection */}
+                  <div className="w-full max-w-sm mx-auto px-8 pb-6 space-y-3 text-center shrink-0 mt-auto relative z-30">
+                        <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
+                            <span>Select Wakil</span>
+                            <span>Step 1</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-purple-500 w-[10%]" />
+                        </div>
+                  </div>
+                </>
+              ) : repScanStage === 'REP_CONFIRMED' ? (
+                <div className="flex flex-col items-center justify-center w-full max-w-md px-6 animate-in fade-in zoom-in duration-300">
+                    <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-purple-200 border-4 border-white">
+                        <User size={48} className="text-purple-600" />
                     </div>
                     
-                    <p className="text-gray-500 font-medium animate-pulse">Verifying Location...</p>
-                </div>
-              )}
+                    <h3 className="text-2xl font-bold text-gov-900 mb-2">Wakil Verified</h3>
+                    <p className="text-gray-500 mb-8 text-center">Identity and location confirmed.</p>
 
-              {/* STAGE: LOCATION CHECK */}
-              {repScanStage === 'LOCATION_CHECK' && (
-                 <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <motion.div 
-                            animate={{ scale: [1, 1.5, 2], opacity: [0.5, 0.2, 0] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                            className="absolute w-full h-full border border-blue-500 rounded-full"
-                        />
-                         <motion.div 
-                            animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-                            transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
-                            className="absolute w-3/4 h-3/4 border border-blue-500 rounded-full"
-                        />
-                    </div>
-                    <motion.div 
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="relative z-10 w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-xl border-4 border-blue-100"
-                    >
-                        <Radar size={48} className="text-blue-600 animate-spin-slow" />
-                    </motion.div>
-                </div>
-              )}
-
-              {/* STAGE: LOCATION SUCCESS */}
-              {repScanStage === 'LOCATION_SUCCESS' && repData && (
-                 <div className="flex flex-col items-center gap-6 w-full max-w-md">
-                    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 w-full">
-                        <div className="flex flex-col items-center mb-4">
-                            <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mb-3 relative">
-                                <User size={40} className="text-purple-600" />
-                                <div className="absolute -bottom-1 -right-1 bg-green-500 text-white p-1 rounded-full border-2 border-white">
-                                    <Check size={12} strokeWidth={4} />
-                                </div>
+                    <div className="bg-white border border-gray-200 rounded-2xl p-6 w-full shadow-sm mb-8 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500" />
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center shrink-0">
+                                <User size={32} className="text-gray-400" />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900">{repData.name}</h3>
-                            <p className="text-sm text-gray-500 font-mono">{repData.ic}</p>
-                            <div className="mt-2 px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-100 flex items-center gap-1">
-                                <Shield size={12} />
-                                Verified Representative
+                            <div>
+                                <p className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Representative</p>
+                                <p className="font-bold text-lg text-gov-900">{repData?.name}</p>
+                                <p className="font-mono text-sm text-gray-500">{repData?.ic}</p>
                             </div>
                         </div>
-                        
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
-                                <span className="text-gray-500 flex items-center gap-2">
-                                    <ScanFace size={14} /> Biometrics
-                                </span>
-                                <span className="text-green-600 font-bold flex items-center gap-1">
-                                    <Check size={14} /> Verified
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
-                                <span className="text-gray-500 flex items-center gap-2">
-                                    <MapPin size={14} /> Location
-                                </span>
-                                <span className="text-green-600 font-bold flex items-center gap-1">
-                                    <Check size={14} /> Verified
-                                </span>
-                            </div>
+                        <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+                            <Check size={16} />
+                            <span className="font-medium">Biometrics & Location Matched</span>
                         </div>
                     </div>
 
                     <button
                         onClick={() => setStep('EVIDENCE')}
-                        className="w-full bg-purple-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-purple-600/20 hover:bg-purple-700 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-4 rounded-xl font-bold text-white bg-purple-600 shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all flex items-center justify-center gap-2"
                     >
-                        Proceed to Evidence <Check size={18} />
+                        <span>Proceed to Evidence</span>
+                        <ChevronLeft className="rotate-180" size={20} />
                     </button>
-                 </div>
-              )}
-
-              {/* Footer Progress Bar (Rep Verification) */}
-              {repScanStage !== 'ID_SELECT' && (
-                <div className="w-full max-w-sm mx-auto px-8 pb-12 space-y-3 text-center shrink-0 mt-auto relative z-30">
-                    <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
-                        <span>
-                            {(repScanStage === 'BIO_SCANNING') ? "Waiting Input" : 
-                             repScanStage === 'BIO_SUCCESS' ? "Authenticated" :
-                             (repScanStage === 'LOCATION_CHECK') ? "Triangulating" : 
-                             (repScanStage === 'LOCATION_SUCCESS') ? "Success" : "Accessing DB"}
-                        </span>
-                        <span>
-                            {(repScanStage === 'BIO_SCANNING') ? "Locked" : 
-                             repScanStage === 'BIO_SUCCESS' ? "Unlocked" :
-                             (repScanStage === 'LOCATION_CHECK') ? "Searching" : 
-                             (repScanStage === 'LOCATION_SUCCESS') ? "Matched" : "Secure"}
-                        </span>
-                    </div>
-                    <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                        {(repScanStage === 'INSERT_CARD' || repScanStage === 'READING_CHIP') && (
-                            <motion.div 
-                                initial={{ width: "0%" }}
-                                animate={{ width: "100%" }}
-                                transition={{ duration: 3, ease: "circInOut" }}
-                                className="h-full bg-gov-900"
-                            />
-                        )}
-                        {(repScanStage === 'BIO_SCANNING') && (
-                             <div className={`h-full bg-red-500 animate-pulse w-[40%]`} />
-                        )}
-                        {repScanStage === 'BIO_SUCCESS' && (
-                             <div className="h-full bg-green-500 w-[50%]" />
-                        )}
-                         {(repScanStage === 'LOCATION_CHECK') && (
-                             <div className="h-full bg-blue-500 w-[80%] animate-pulse" />
-                        )}
-                        {(repScanStage === 'LOCATION_SUCCESS') && (
-                             <div className="h-full bg-green-500 w-full" />
-                        )}
-                    </div>
                 </div>
+              ) : (
+                <VerificationStages 
+                    stage={repScanStage as ScanStage} 
+                    locationType="HOME"
+                    onBioAuth={handleRepBioAuth}
+                    enableFaceScan={true}
+                    stepLabel={
+                        ['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS'].includes(repScanStage) ? "Step 2" :
+                        ['GPS_SCANNING', 'GPS_SUCCESS'].includes(repScanStage) ? "Step 3" : 
+                        repScanStage === 'READING_DATA' ? "Secure" : undefined
+                    }
+                />
               )}
-
             </motion.div>
           )}
 
@@ -584,11 +430,15 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               className="flex flex-col min-h-full py-10"
             >
                  <div className="flex-1 flex flex-col items-center p-6">
-                    <h3 className="text-2xl font-bold text-gov-900 mb-2">Proof of Condition</h3>
-                    <p className="text-gray-500 mb-8 text-center">Capture photo of pensioner to verify condition</p>
+                        {!photoCaptured && (
+                            <>
+                                <h3 className="text-2xl font-bold text-gov-900 mb-2">Proof of Condition</h3>
+                                <p className="text-gray-500 mb-8 text-center">Capture photo of pensioner to verify condition</p>
+                            </>
+                        )}
                     
                     {/* Camera/Upload Buttons */}
-                    {!isCameraActive && (
+                    {!isCameraActive && !photoCaptured && (
                         <div className="w-full max-w-md flex gap-4 mb-6">
                             <button
                                 onClick={handleCapturePhoto}
@@ -644,44 +494,54 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
 
                     {/* Photo Preview (Below Buttons) */}
                     {photoCaptured && photoPreview && !isCameraActive && (
-                         <div className="mb-8 relative w-full max-w-md">
-                             <div className="relative w-full h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                         <div className="mb-8 relative w-full max-w-md flex flex-col items-center">
+                             <div className="relative w-full h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 mb-6">
                                 <img src={photoPreview} alt="Evidence" className="w-full h-full object-cover" />
                                 <button 
                                     onClick={() => {
                                         setPhotoCaptured(false);
                                         setPhotoPreview(null);
                                     }}
-                                    className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full hover:bg-black/70 backdrop-blur-sm"
+                                    className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 backdrop-blur-sm z-10"
                                 >
-                                    <X size={14} />
+                                    <X size={20} />
                                 </button>
                              </div>
-                             <div className="flex items-center gap-2 mt-2 text-green-600 text-xs font-bold justify-center">
-                                 <Check size={12} /> Photo Captured
-                             </div>
+                             
+                             <button
+                                onClick={() => setStep('PENSIONER_CONSENT')}
+                                className="w-full py-4 rounded-xl bg-gov-900 text-white font-bold shadow-lg hover:bg-gov-800 transition-all flex items-center justify-center gap-2"
+                             >
+                                Proceed to Pensioner Consent <Check size={18} />
+                             </button>
                          </div>
                     )}
+                 </div>
+            </motion.div>
+          )}
 
-                    {/* Consent Flow (Appears after photo is captured) */}
-                    {photoCaptured && !isCameraActive && (
-                        <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
-                             <div className="mb-6 text-center">
-                                <h3 className="text-xl font-bold text-gov-900">
-                                    {consentStage === 'ID_SELECT' && "Pensioner Consent"}
-                                    {consentStage === 'JPN_CHECK' && "Verifying Chip Data"}
-                                    {consentStage === 'JPN_FAIL' && "ID Mismatch"}
-                                    {consentStage === 'INSERT_CARD' && "Secure Connection"}
-                                    {consentStage === 'BIO_LOCK' && "Identity Locked"}
-                                    {consentStage === 'BIO_SCANNING' && "Verifying Biometrics"}
-                                    {consentStage === 'BIO_SUCCESS' && "Consent Verified"}
-                                    {consentStage === 'GPS_SCANNING' && "Verifying Location"}
-                                    {consentStage === 'GPS_SUCCESS' && "Location Verified"}
-                                    {consentStage === 'READING_DATA' && "Signing Contract"}
-                                </h3>
-                             </div>
+          {/* STEP 6: PENSIONER CONSENT */}
+          {step === 'PENSIONER_CONSENT' && (
+            <motion.div
+              key="consent"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex flex-col min-h-full py-10"
+            >
+                 <div className="flex-1 flex flex-col items-center p-6">
+                        <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 flex-1 flex flex-col">
+                             {['ID_SELECT', 'JPN_CHECK', 'JPN_FAIL'].includes(consentStage) && (
+                                <div className="mb-6 text-center shrink-0">
+                                    <h3 className="text-xl font-bold text-gov-900">
+                                        {consentStage === 'ID_SELECT' && "Pensioner Consent"}
+                                        {consentStage === 'JPN_CHECK' && "Verifying Chip Data"}
+                                        {consentStage === 'JPN_FAIL' && "ID Mismatch"}
+                                    </h3>
+                                </div>
+                             )}
 
-                             <div className="flex flex-col items-center">
+                             <div className="flex flex-col items-center flex-1 w-full justify-center">
                                  {/* CONSENT: ID SELECT */}
                                  {consentStage === 'ID_SELECT' && (
                                      <div className="w-full space-y-3">
@@ -705,7 +565,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
 
                                  {/* CONSENT: JPN CHECK */}
                                  {consentStage === 'JPN_CHECK' && (
-                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-20">
                                          <motion.div 
                                             animate={{ rotate: 360 }}
                                             transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
@@ -728,7 +588,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
 
                                  {/* CONSENT: JPN FAIL */}
                                  {consentStage === 'JPN_FAIL' && (
-                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
+                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-20">
                                          <motion.div 
                                             initial={{ scale: 0.8, opacity: 0 }}
                                             animate={{ scale: 1, opacity: 1 }}
@@ -742,259 +602,129 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                      </div>
                                  )}
 
-                                 {/* CONSENT: INSERT CARD */}
-                                 {consentStage === 'INSERT_CARD' && (
-                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                                        <div className="absolute bottom-0 w-56 h-20 bg-gov-900 rounded-t-xl z-20 shadow-2xl border-t border-gray-700 flex justify-center overflow-hidden">
-                                            <div className="w-full h-1 bg-black/50 mt-1 absolute top-0"></div>
-                                            <div className="absolute top-4 right-6 flex gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-red-900"></div>
-                                                <div className="w-2 h-2 rounded-full bg-green-900"></div>
-                                            </div>
-                                            <div className="w-32 h-full border-l border-r border-white/5 bg-white/5 mx-auto skew-x-12"></div>
-                                        </div>
-                                        <motion.div 
-                                            className="absolute z-10 w-40 h-64 rounded-xl shadow-xl flex flex-col overflow-hidden"
-                                            initial={{ y: -100, opacity: 0 }}
-                                            animate={{ y: 80, opacity: 1 }}
-                                            transition={{ duration: 1.2, type: "spring", bounce: 0.15 }}
-                                        >
-                                            <div className="w-full h-full bg-gradient-to-br from-blue-700 via-blue-500 to-blue-300 relative border border-white/20">
-                                                 <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                                                 <div className="absolute top-12 left-1/2 -translate-x-1/2 w-10 h-8 bg-gradient-to-tr from-yellow-600 to-yellow-300 rounded-md border border-yellow-700 shadow-sm flex items-center justify-center">
-                                                     <Cpu size={20} className="text-yellow-900 opacity-60" />
-                                                 </div>
-                                                 <div className="absolute bottom-0 w-full h-16 bg-gradient-to-t from-red-600/20 to-transparent"></div>
-                                            </div>
-                                        </motion.div>
-                                    </div>
-                                 )}
-
-                                 {/* CONSENT: READING DATA (Secure Chip Animation) */}
-                                 {consentStage === 'READING_DATA' && (
-                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                                         <motion.div 
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                                            className="absolute w-56 h-56 border border-dashed border-blue-300 rounded-full opacity-50"
-                                         />
-                                         <motion.div 
-                                            animate={{ rotate: -360 }}
-                                            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-                                            className="absolute w-48 h-48 border border-dashed border-purple-300 rounded-full opacity-50"
-                                         />
-                                         
-                                         <div className="relative z-10 w-32 h-40 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-2xl border-2 border-yellow-200 flex flex-col items-center justify-center overflow-hidden">
-                                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-30"></div>
-                                             <Cpu size={48} className="text-yellow-900 relative z-10" />
-                                             <div className="mt-2 text-[10px] font-bold text-yellow-900 uppercase tracking-widest relative z-10">Secure Chip</div>
-                                             
-                                             {/* Scanning Line */}
-                                             <motion.div 
-                                                animate={{ top: ['0%', '100%', '0%'] }}
-                                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                                className="absolute left-0 right-0 h-1 bg-white/50 shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20"
-                                             />
-                                         </div>
-
-                                         <div className="absolute -bottom-12 flex flex-col items-center gap-2">
-                                             <div className="flex gap-1">
-                                                 <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-2 h-2 bg-blue-500 rounded-full" />
-                                                 <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-2 h-2 bg-blue-500 rounded-full" />
-                                                 <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-2 h-2 bg-blue-500 rounded-full" />
-                                             </div>
-                                             <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Decrypting Data</span>
-                                         </div>
-                                     </div>
-                                 )}
-
-                                 {/* CONSENT: BIO LOCK & SCANNING */}
-                                 {consentStage === 'BIO_LOCK' && (
-                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                                         <motion.div 
-                                            initial={{ scale: 0.8, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            className="relative"
-                                         />
-                                            <div className="absolute inset-0 rounded-full blur-xl bg-red-500/20"></div>
-                                            <button 
-                                                onClick={handleConsentBioAuth}
-                                                className="w-32 h-32 bg-white rounded-full border-4 flex items-center justify-center shadow-2xl relative z-10 transition-all border-red-100 active:scale-95"
-                                            >
-                                                <Fingerprint size={64} className="text-red-500" />
-                                            </button>
-                                            <div className="absolute -bottom-16 left-0 right-0 text-center">
-                                                <p className="text-xs font-bold text-red-500 animate-pulse uppercase tracking-widest">
-                                                    Touch to Consent
-                                                </p>
-                                            </div>
-                                     </div>
-                                 )}
-
-                                 {consentStage === 'BIO_SCANNING' && (
-                                     <div className="w-full h-full absolute inset-0 z-50 bg-white">
-                                         {showConsentBioScanner && (
-                                             <BiometricVerification 
-                                                onVerified={handleConsentBioVerified}
-                                                onCancel={() => {
-                                                    setShowConsentBioScanner(false);
-                                                    setConsentStage('BIO_LOCK');
-                                                }}
-                                             />
-                                         )}
-                                     </div>
-                                 )}
-
-                                 {/* CONSENT: BIO SUCCESS */}
-                                 {consentStage === 'BIO_SUCCESS' && (
-                                    <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                                        <motion.div 
-                                            initial={{ scale: 0.5, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            className="relative z-10 w-32 h-32 bg-green-50 rounded-full flex items-center justify-center shadow-xl border-4 border-green-500"
-                                        >
-                                            <Fingerprint size={48} className="text-green-600" />
-                                            <motion.div 
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                transition={{ delay: 0.2, type: "spring" }}
-                                                className="absolute -top-1 -right-1 text-white p-2 rounded-full border-4 border-white bg-green-500"
-                                            >
-                                                <Check size={24} strokeWidth={4} />
-                                            </motion.div>
-                                        </motion.div>
-                                    </div>
-                                 )}
-
-                                 {/* CONSENT: GPS SCANNING */}
-                                 {consentStage === 'GPS_SCANNING' && (
-                                    <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <motion.div 
-                                                animate={{ scale: [1, 1.5, 2], opacity: [0.5, 0.2, 0] }}
-                                                transition={{ repeat: Infinity, duration: 2 }}
-                                                className="absolute w-full h-full border border-blue-500 rounded-full"
-                                            />
-                                             <motion.div 
-                                                animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-                                                transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
-                                                className="absolute w-3/4 h-3/4 border border-blue-500 rounded-full"
-                                            />
-                                        </div>
-                                        <motion.div 
-                                            initial={{ scale: 0 }}
-                                            animate={{ scale: 1 }}
-                                            className="relative z-10 w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-xl border-4 border-blue-100"
-                                        >
-                                            <Radar size={48} className="text-blue-600 animate-spin-slow" />
-                                        </motion.div>
-                                    </div>
-                                 )}
-                                 
-                                 {/* CONSENT: GPS SUCCESS */}
-                                 {consentStage === 'GPS_SUCCESS' && (
-                                    <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-10">
-                                        <motion.div 
-                                            initial={{ scale: 0.5, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            className="relative z-10 w-32 h-32 bg-green-50 rounded-full flex items-center justify-center shadow-xl border-4 border-green-500"
-                                        >
-                                            <MapPin size={48} className="text-green-600" />
-                                            <motion.div 
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                transition={{ delay: 0.2, type: "spring" }}
-                                                className="absolute -top-1 -right-1 bg-green-500 text-white p-2 rounded-full border-4 border-white"
-                                            >
-                                                <Check size={24} strokeWidth={4} />
-                                            </motion.div>
-                                        </motion.div>
-                                    </div>
+                                 {/* CONSENT: MAIN STAGES */}
+                                 {['INSERT_CARD', 'BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS', 'GPS_SCANNING', 'GPS_SUCCESS', 'READING_DATA'].includes(consentStage) && (
+                                     <VerificationStages 
+                                        stage={consentStage as ScanStage} 
+                                        locationType="HOME"
+                                        onBioAuth={handleConsentBioAuth}
+                                        enableFaceScan={true}
+                                        referenceImage={beneficiary.photoUrl}
+                                        stepLabel={
+                                            consentStage === 'INSERT_CARD' ? "Step 1" :
+                                            ['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS'].includes(consentStage) ? "Step 2" :
+                                            ['GPS_SCANNING', 'GPS_SUCCESS'].includes(consentStage) ? "Step 3" : 
+                                            consentStage === 'READING_DATA' ? "Secure" : undefined
+                                        }
+                                        customDecryptingText="Verifying consent & generating contract..."
+                                     />
                                  )}
                              </div>
-
-                             {/* Footer Progress Bar (Consent Flow) */}
-                             {consentStage !== 'ID_SELECT' && consentStage !== 'READING_DATA' && (
-                                <div className="w-full max-w-sm mx-auto px-8 pb-12 space-y-3 text-center shrink-0 mt-auto relative z-30">
-                                    <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
-                                        <span>
-                                            {(consentStage === 'BIO_SCANNING' || consentStage === 'BIO_LOCK') ? "Waiting Input" : 
-                                             consentStage === 'BIO_SUCCESS' ? "Authenticated" :
-                                             (consentStage === 'GPS_SCANNING') ? "Triangulating" : 
-                                             (consentStage === 'GPS_SUCCESS') ? "Success" : "Accessing DB"}
-                                        </span>
-                                        <span>
-                                            {(consentStage === 'BIO_SCANNING' || consentStage === 'BIO_LOCK') ? "Locked" : 
-                                             consentStage === 'BIO_SUCCESS' ? "Unlocked" :
-                                             (consentStage === 'GPS_SCANNING') ? "Searching" : 
-                                             (consentStage === 'GPS_SUCCESS') ? "Matched" : "Secure"}
-                                        </span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                                        {(consentStage === 'INSERT_CARD' || consentStage === 'JPN_CHECK') && (
-                                            <motion.div 
-                                                initial={{ width: "0%" }}
-                                                animate={{ width: "100%" }}
-                                                transition={{ duration: 3, ease: "circInOut" }}
-                                                className="h-full bg-gov-900"
-                                            />
-                                        )}
-                                        {(consentStage === 'BIO_LOCK' || consentStage === 'BIO_SCANNING') && (
-                                             <div className={`h-full bg-red-500 animate-pulse ${consentStage === 'BIO_SCANNING' ? 'w-[40%]' : 'w-[20%]'}`} />
-                                        )}
-                                        {consentStage === 'BIO_SUCCESS' && (
-                                             <div className="h-full bg-green-500 w-[50%]" />
-                                        )}
-                                         {(consentStage === 'GPS_SCANNING') && (
-                                             <div className="h-full bg-blue-500 w-[80%] animate-pulse" />
-                                        )}
-                                        {(consentStage === 'GPS_SUCCESS') && (
-                                             <div className="h-full bg-green-500 w-full" />
-                                        )}
-                                    </div>
-                                </div>
-                             )}
                         </div>
-                    )}
+                        
+                        {/* Footer Progress Bar for JPN Stages */}
+                        {(consentStage === 'ID_SELECT' || consentStage === 'JPN_CHECK' || consentStage === 'JPN_FAIL') && (
+                            <div className="w-full max-w-sm mx-auto px-8 pb-6 space-y-3 text-center shrink-0 mt-auto relative z-30">
+                                <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
+                                    <span>{consentStage === 'JPN_FAIL' ? "Failed" : consentStage === 'ID_SELECT' ? "Select ID" : "Verifying"}</span>
+                                    <span>{consentStage === 'JPN_FAIL' ? "Error" : "Step 1"}</span>
+                                </div>
+                                <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                                    <div className={`h-full ${consentStage === 'JPN_FAIL' ? 'bg-red-500' : 'bg-blue-500 animate-pulse'} ${consentStage === 'ID_SELECT' ? 'w-[10%]' : 'w-[20%]'}`} />
+                                </div>
+                            </div>
+                        )}
                  </div>
             </motion.div>
           )}
 
-          {/* STEP 4: DIGITAL CONTRACT (SUCCESS) */}
+          {/* STEP 7: DIGITAL CONTRACT (SUCCESS) */}
           {step === 'CONTRACT' && repData && (
             <motion.div
               key="contract"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex flex-col items-center justify-center min-h-full py-10"
+              className="flex flex-col items-center justify-center min-h-full py-6 w-full px-4"
             >
-              <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-200">
-                <FileText className="w-12 h-12 text-green-600" />
-              </div>
-              
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Wakil Appointed!</h2>
-              <p className="text-gray-500 mb-8">Digital authorization contract created.</p>
+              {/* KWAP WARRANT CARD - Horizontal Layout */}
+              <div className="w-full max-w-3xl bg-white border-2 border-gov-900 rounded-2xl overflow-hidden shadow-2xl mb-8">
+                  {/* Header */}
+                  <div className="bg-gov-900 text-white p-4 relative overflow-hidden flex items-center justify-between">
+                      <div className="absolute top-0 left-0 w-full h-full bg-white/5 pattern-grid-lg opacity-20"></div>
+                      <div className="relative z-10">
+                        <h2 className="text-xl font-black tracking-widest leading-none">KWAP PAYMENT WARRANT</h2>
+                        <p className="text-[10px] font-medium text-gray-300 uppercase tracking-wider mt-1">Universal Cash Authorization</p>
+                      </div>
+                      <div className="relative z-10 flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+                          <Shield size={14} className="text-white" />
+                          <span className="text-[10px] font-bold text-white uppercase tracking-wider">Retirement Fund (Inc)</span>
+                      </div>
+                  </div>
 
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-sm mb-8 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500" />
-                
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Representative</p>
-                        <p className="font-bold text-lg">{repData.name}</p>
-                        <p className="font-mono text-sm text-gray-500">{repData.ic}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">For Pensioner</p>
-                        <p className="font-bold text-lg">{beneficiary.name}</p>
-                        <p className="font-mono text-sm text-gray-500">{beneficiary.ic}</p>
-                    </div>
-                </div>
+                  <div className="flex flex-col md:flex-row">
+                      {/* Left Side: Financial Details */}
+                      <div className="flex-1 p-6 md:p-8 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col justify-center">
+                          {/* Amount Hero */}
+                          <div className="mb-6">
+                              <p className="text-xs text-gray-400 uppercase font-bold mb-1">Authorized Amount</p>
+                              <div className="text-5xl font-black text-green-600 tracking-tight">
+                                  RM {beneficiary.monthlyPayout.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                          </div>
 
-                <div className="bg-gray-50 rounded-lg p-3 flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Validity</span>
-                    <span className="font-bold text-gray-900">24 Hours</span>
-                </div>
+                          {/* Details Grid */}
+                          <div className="grid grid-cols-2 gap-6 mb-6">
+                              <div>
+                                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Appointed Wakil</p>
+                                  <p className="font-bold text-gray-900 leading-tight mb-0.5 text-base">{repData.name}</p>
+                                  <p className="font-mono text-xs text-gray-500">{repData.ic}</p>
+                              </div>
+                              <div>
+                                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Beneficiary</p>
+                                  <p className="font-bold text-gray-900 leading-tight mb-0.5 text-base">{beneficiary.name}</p>
+                                  <p className="font-mono text-xs text-gray-500">{beneficiary.ic}</p>
+                              </div>
+                          </div>
+                          
+                           {/* Ref ID */}
+                          <div className="flex items-center gap-2 text-xs text-gray-400 font-mono bg-gray-50 py-2 px-3 rounded-lg border border-gray-100 border-dashed w-fit">
+                              <Check size={12} className="text-green-500" />
+                              <span>REF: POL-{Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
+                          </div>
+                      </div>
+
+                      {/* Right Side: QR Code */}
+                      <div className="p-6 md:p-8 flex flex-col items-center justify-center bg-gray-50/50 md:w-80 shrink-0 border-l border-gray-100">
+                          <div className="bg-white p-3 rounded-xl border-2 border-gray-900 shadow-sm mb-4">
+                              <QRCodeSVG 
+                                value={JSON.stringify({
+                                  type: "KWAP_WARRANT_V1",
+                                  warrant_id: `KWAP-${Math.floor(Math.random() * 1000000)}`,
+                                  pol_ref: `POL-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                                  amount: beneficiary.monthlyPayout,
+                                  currency: "MYR",
+                                  beneficiary_ic: beneficiary.ic,
+                                  wakil_ic: repData.ic,
+                                  expiry: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+                                  signature: "dev_signed_hash_mock"
+                                })}
+                                size={160}
+                                level="H"
+                              />
+                          </div>
+                          <p className="text-[10px] text-center text-gray-500 max-w-[200px] leading-tight font-medium">
+                              Scan at BSN, Maybank, CIMB, Pos Malaysia to release funds.
+                          </p>
+                      </div>
+                  </div>
+
+                  {/* Footer Validity */}
+                  <div className="bg-amber-50 border-t border-amber-100 p-3 flex justify-between items-center px-6">
+                      <span className="text-[10px] font-bold text-amber-800/60 uppercase tracking-wider hidden md:inline">Valid for 72 Hours</span>
+                      <p className="text-xs font-bold text-amber-800 w-full md:w-auto text-center md:text-right">
+                          Expires: {new Date(Date.now() + 72 * 60 * 60 * 1000).toLocaleString('en-MY', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                  </div>
               </div>
 
               <button

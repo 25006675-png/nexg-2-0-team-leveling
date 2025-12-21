@@ -31,6 +31,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
+  const [queueStats, setQueueStats] = useState({ total: 0, pol: 0, wakil: 0 });
+
+  useEffect(() => {
+      const updateStats = () => {
+          const queue = OfflineManager.getQueue();
+          const pol = queue.filter(i => i.type === 'PROOF_OF_LIFE' || !i.type).length;
+          const wakil = queue.filter(i => i.type === 'WAKIL_APPOINTMENT').length;
+          setQueueStats({ total: queue.length, pol, wakil });
+      };
+      
+      updateStats();
+      // Update whenever beneficiaries change as a proxy for activity
+  }, [beneficiaries, isOffline]);
   
   // Note: Network detection is handled globally in page.tsx and passed via isOffline prop
 
@@ -112,7 +125,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </div>
 
           {/* Sync Status Banner */}
-          {pendingSyncList.length > 0 && !isOffline && (
+          {queueStats.total > 0 && !isOffline && (
               <motion.div 
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -120,7 +133,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
               >
                   <div className="flex items-center gap-2">
                       <CloudUpload size={16} className="text-blue-600" />
-                      <span className="text-xs font-bold text-blue-800">{pendingSyncList.length} {t.dashboard.syncNeeded}</span>
+                      <span className="text-xs font-bold text-blue-800">
+                          {queueStats.total} Records Pending ({queueStats.pol} Proof of Life, {queueStats.wakil} Wakil)
+                      </span>
                   </div>
                   <button 
                     onClick={handleManualSync}
@@ -133,11 +148,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
               </motion.div>
           )}
 
-          {pendingSyncList.length > 0 && isOffline && (
+          {queueStats.total > 0 && isOffline && (
               <div className="bg-gray-200 border border-gray-300 rounded-lg p-3 flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">
                       <CloudUpload size={16} className="text-gray-500" />
-                      <span className="text-xs font-bold text-gray-600">{pendingSyncList.length} {t.extra.savedLocally}</span>
+                      <span className="text-xs font-bold text-gray-600">
+                          {queueStats.total} Records Pending ({queueStats.pol} Proof of Life, {queueStats.wakil} Wakil)
+                      </span>
                   </div>
                   <span className="text-[10px] font-bold text-gray-500 uppercase">{t.history.pendingUpload}</span>
               </div>
