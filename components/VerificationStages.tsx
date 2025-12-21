@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Cpu, Fingerprint, Check, Radar, MapPin, ScanFace, Lock } from 'lucide-react';
+import { Cpu, Fingerprint, Check, Radar, MapPin, ScanFace, Lock, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import BiometricVerification from './BiometricVerification';
 
@@ -220,7 +220,7 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({ stage, location
                             animate={{ scale: [1, 1.1, 1] }}
                             transition={{ duration: 1.5, repeat: Infinity }}
                         >
-                            <Lock size={48} className="text-blue-600" />
+                            <ShieldCheck size={48} className="text-blue-600" />
                         </motion.div>
                         
                         <motion.div 

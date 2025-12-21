@@ -200,7 +200,7 @@ const AppContent: React.FC = () => {
     setStep('confirmation');
   };
 
-  const handleWakilComplete = (repName: string) => {
+  const handleWakilComplete = (wakilName: string) => {
     if (!selectedBeneficiary) return;
 
     const currentServiceCount = selectedBeneficiary.serviceCount || 0;
@@ -297,7 +297,7 @@ const AppContent: React.FC = () => {
     verification: "Identity Check",
     confirmation: t.steps.confirmation,
     success: t.steps.success,
-    wakil_verify: "Verify Representative",
+    wakil_verify: "Verify Wakil",
     wakil_evidence: "Evidence",
     wakil_consent: "Pensioner Consent",
     wakil_contract: "Digital Contract",

@@ -1,34 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { Shield, AlertTriangle, Check, Camera, Fingerprint, FileText, MapPin, User, Loader2, X, Cpu, Database, Search, UserX, Radar, Upload, ScanLine, ScanFace, ChevronLeft } from 'lucide-react';
+import { Shield, AlertTriangle, Check, Camera, Fingerprint, FileText, MapPin, User, Loader2, X, Cpu, Database, Search, UserX, Radar, Upload, ScanLine, ScanFace, ChevronLeft, FileSignature } from 'lucide-react';
 import { Beneficiary } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import BiometricVerification from './BiometricVerification';
 import VerificationStages, { ScanStage } from './VerificationStages';
 import { OfflineManager } from '../utils/OfflineManager';
+import AlertModal from './AlertModal';
 
-export type WakilStep = 'LEGAL_DECLARATION' | 'VERIFY_REP' | 'EVIDENCE' | 'PENSIONER_CONSENT' | 'CONTRACT';
+export type WakilStep = 'LEGAL_DECLARATION' | 'VERIFY_WAKIL' | 'EVIDENCE' | 'PENSIONER_CONSENT' | 'CONTRACT';
 
 interface WakilVerificationScreenProps {
   beneficiary: Beneficiary;
-  onComplete: (repName: string) => void;
+  onComplete: (wakilName: string) => void;
   onBack: () => void;
   onStepChange?: (step: WakilStep) => void;
   kampungId: string;
 }
 
-// Mock Reps
-const MOCK_REPS = [
-  { name: 'Ahmad Bin Abdullah', ic: '850101-12-5543' },
-  { name: 'Siti Binti Ali', ic: '900505-10-5122' },
-  { name: 'Tan Ah Meng', ic: '780202-07-5511' },
-  { name: 'Muthu A/L Sami', ic: '820303-08-5533' }
+// Mock Wakils
+const MOCK_WAKILS = [
+  { name: 'Ahmad Bin Abdullah', ic: '850101-12-5543', address: 'No. 5, Jalan Kampung, 89500 Penampang, Sabah' },
+  { name: 'Siti Binti Ali', ic: '900505-10-5122', address: 'Lot 12, Lorong Damai, 88450 Kota Kinabalu, Sabah' },
+  { name: 'Tan Ah Meng', ic: '780202-07-5511', address: 'No. 88, Taman Ceria, 89000 Keningau, Sabah' },
+  { name: 'Muthu A/L Sami', ic: '820303-08-5533', address: 'Batu 5, Jalan Tuaran, 88400 Kota Kinabalu, Sabah' }
 ];
 
 const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ beneficiary, onComplete, onBack, onStepChange, kampungId }) => {
   const { t } = useLanguage();
   const [step, setStep] = useState<WakilStep>('LEGAL_DECLARATION');
+  const [showExitAlert, setShowExitAlert] = useState(false);
 
   useEffect(() => {
     if (onStepChange) {
@@ -39,12 +41,12 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   // Legal Declaration State
   const [acceptedLiability, setAcceptedLiability] = useState(false);
 
-  // Verify Rep State
-  const [repScanStage, setRepScanStage] = useState<'ID_SELECT' | ScanStage | 'REP_CONFIRMED'>('ID_SELECT');
-  const [repData, setRepData] = useState<{ name: string; ic: string } | null>(null);
+  // Verify Wakil State
+  const [wakilScanStage, setWakilScanStage] = useState<'ID_SELECT' | ScanStage | 'WAKIL_CONFIRMED'>('ID_SELECT');
+  const [wakilData, setWakilData] = useState<{ name: string; ic: string; address: string } | null>(null);
   const [checkingLocation, setCheckingLocation] = useState(false);
   const [locationValid, setLocationValid] = useState(false);
-  const [showRepBioScanner, setShowRepBioScanner] = useState(false);
+  const [showWakilBioScanner, setShowWakilBioScanner] = useState(false);
 
   // Evidence State
   const [photoCaptured, setPhotoCaptured] = useState(false);
@@ -56,6 +58,9 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   const [consentStarted, setConsentStarted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  
+  // Animation Controls
+  const progressControls = useAnimation();
   
   // Real Camera State
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -139,43 +144,59 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
     }
   }, [step, beneficiary]);
 
+  // Control Signing Progress Animation
+  useEffect(() => {
+    if (consentStage === 'READING_DATA' || isSigning) {
+        if (showExitAlert) {
+            progressControls.stop();
+        } else {
+            progressControls.start({ 
+                width: "100%",
+                transition: { duration: 4, ease: "easeInOut" } 
+            });
+        }
+    } else {
+        progressControls.set({ width: "0%" });
+    }
+  }, [consentStage, isSigning, showExitAlert, progressControls]);
+
   const handleAcceptLiability = () => {
     if (acceptedLiability) {
-      setStep('VERIFY_REP');
+      setStep('VERIFY_WAKIL');
     }
   };
 
-  // --- REP VERIFICATION FLOW ---
-  const handleRepSelect = (rep: { name: string; ic: string }) => {
-    setRepData(rep);
-    setRepScanStage('BIO_LOCK');
+  // --- WAKIL VERIFICATION FLOW ---
+  const handleWakilSelect = (rep: { name: string; ic: string; address: string }) => {
+    setWakilData(rep);
+    setWakilScanStage('BIO_LOCK');
   };
 
-  const handleRepBioAuth = () => {
-      setRepScanStage('BIO_SCANNING');
+  const handleWakilBioAuth = () => {
+      setWakilScanStage('BIO_SCANNING');
       setTimeout(() => {
-          handleRepBioVerified();
+          handleWakilBioVerified();
       }, 2000);
   };
 
-  const handleRepBioVerified = () => {
-      setShowRepBioScanner(false);
-      setRepScanStage('BIO_SUCCESS');
+  const handleWakilBioVerified = () => {
+      setShowWakilBioScanner(false);
+      setWakilScanStage('BIO_SUCCESS');
 
       // Auto-advance to location check
       setTimeout(() => {
-        setRepScanStage('GPS_SCANNING');
+        setWakilScanStage('GPS_SCANNING');
         setCheckingLocation(true);
         
         setTimeout(() => {
           setCheckingLocation(false);
           setLocationValid(true);
-          setRepScanStage('GPS_SUCCESS');
+          setWakilScanStage('GPS_SUCCESS');
           
           setTimeout(() => {
-              setRepScanStage('READING_DATA');
+              setWakilScanStage('READING_DATA');
               setTimeout(() => {
-                  setRepScanStage('REP_CONFIRMED');
+                  setWakilScanStage('WAKIL_CONFIRMED');
               }, 2000);
           }, 1500);
         }, 2500);
@@ -229,13 +250,13 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                  setStep('CONTRACT');
                  
                  // Silent Save
-                 if (repData) {
+                 if (wakilData) {
                      OfflineManager.addToQueue(
                          beneficiary,
                          kampungId,
                          'WAKIL_APPOINTMENT',
                          undefined,
-                         { name: repData.name, ic: repData.ic }
+                         { name: wakilData.name, ic: wakilData.ic }
                      );
                  }
                }, 2000);
@@ -249,21 +270,63 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
     startCamera();
   };
 
+  const executeBackNavigation = () => {
+    setShowExitAlert(false);
+    switch (step) {
+        case 'CONTRACT':
+            setStep('PENSIONER_CONSENT');
+            break;
+        case 'PENSIONER_CONSENT':
+            setStep('EVIDENCE');
+            break;
+        case 'EVIDENCE':
+            setStep('VERIFY_WAKIL');
+            break;
+        case 'VERIFY_WAKIL':
+            setStep('LEGAL_DECLARATION');
+            break;
+        case 'LEGAL_DECLARATION':
+            onBack();
+            break;
+        default:
+            onBack();
+    }
+  };
+
+  const handleSmartBack = () => {
+    // Safety Intercept
+    let isCritical = false;
+    
+    if (step === 'VERIFY_WAKIL') {
+        if (['BIO_SCANNING', 'GPS_SCANNING', 'READING_DATA'].includes(wakilScanStage as string)) isCritical = true;
+    } else if (step === 'PENSIONER_CONSENT') {
+        if (['JPN_CHECK', 'BIO_SCANNING', 'GPS_SCANNING', 'READING_DATA'].includes(consentStage)) isCritical = true;
+    }
+
+    if (isCritical) {
+        setShowExitAlert(true);
+        return;
+    }
+
+    executeBackNavigation();
+  };
+
   return (
     <div className="h-full flex flex-col relative">
       {/* Header */}
       <div className="flex items-center gap-4 mb-4 shrink-0 px-6 pt-6">
         <button 
-          onClick={onBack}
-          className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+          onClick={handleSmartBack}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
         >
-          <X size={20} />
+          <ChevronLeft size={20} />
+          <span className="font-bold text-sm">Back</span>
         </button>
         <div>
           <h2 className="text-xl font-bold text-gray-900">Wakil Appointment</h2>
           <div className="flex items-center gap-2 text-sm text-purple-600 font-medium">
             <Shield size={14} />
-            <span>Authorized Representative Mode</span>
+            <span>Authorized Wakil Mode</span>
           </div>
         </div>
       </div>
@@ -323,8 +386,8 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
             </motion.div>
           )}
 
-          {/* STEP 2: VERIFY REPRESENTATIVE */}
-          {step === 'VERIFY_REP' && (
+          {/* STEP 2: VERIFY WAKIL */}
+          {step === 'VERIFY_WAKIL' && (
             <motion.div
               key="verify_rep"
               initial={{ opacity: 0, x: 20 }}
@@ -332,18 +395,18 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               exit={{ opacity: 0, x: -20 }}
               className="flex flex-col items-center justify-center min-h-full py-10 w-full"
             >
-              {repScanStage === 'ID_SELECT' ? (
+              {wakilScanStage === 'ID_SELECT' ? (
                 <>
                   <div className="flex-1 flex flex-col items-center justify-center w-full">
                     <div className="mb-8 text-center">
-                        <h3 className="text-2xl font-bold text-gov-900">Select Representative</h3>
-                        <p className="text-gray-500 text-sm mt-1">Select the representative's MyKad to scan</p>
+                        <h3 className="text-2xl font-bold text-gov-900">Select Wakil</h3>
+                        <p className="text-gray-500 text-sm mt-1">Select the Wakil's MyKad to scan</p>
                     </div>
                     <div className="w-full max-w-md px-4 space-y-3">
-                        {MOCK_REPS.map((rep, idx) => (
+                        {MOCK_WAKILS.map((rep, idx) => (
                             <button
                                 key={idx}
-                                onClick={() => handleRepSelect(rep)}
+                                onClick={() => handleWakilSelect(rep)}
                                 className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-100 hover:border-purple-500 hover:bg-purple-50 transition-all group text-left bg-white shadow-sm"
                             >
                                 <div className="w-12 h-8 bg-gradient-to-br from-purple-200 to-purple-300 rounded-md shadow-sm flex items-center justify-center shrink-0 relative overflow-hidden">
@@ -369,7 +432,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         </div>
                   </div>
                 </>
-              ) : repScanStage === 'REP_CONFIRMED' ? (
+              ) : wakilScanStage === 'WAKIL_CONFIRMED' ? (
                 <div className="flex flex-col items-center justify-center w-full max-w-md px-6 animate-in fade-in zoom-in duration-300">
                     <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-purple-200 border-4 border-white">
                         <User size={48} className="text-purple-600" />
@@ -385,9 +448,13 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                 <User size={32} className="text-gray-400" />
                             </div>
                             <div>
-                                <p className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Representative</p>
-                                <p className="font-bold text-lg text-gov-900">{repData?.name}</p>
-                                <p className="font-mono text-sm text-gray-500">{repData?.ic}</p>
+                                <p className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Wakil</p>
+                                <p className="font-bold text-lg text-gov-900">{wakilData?.name}</p>
+                                <p className="font-mono text-sm text-gray-500">{wakilData?.ic}</p>
+                                <div className="flex items-center gap-1 mt-1 text-gray-500">
+                                    <MapPin size={12} />
+                                    <p className="text-xs">{wakilData?.address}</p>
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
@@ -406,15 +473,16 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                 </div>
               ) : (
                 <VerificationStages 
-                    stage={repScanStage as ScanStage} 
+                    stage={wakilScanStage as ScanStage} 
                     locationType="HOME"
-                    onBioAuth={handleRepBioAuth}
+                    onBioAuth={handleWakilBioAuth}
                     enableFaceScan={true}
                     stepLabel={
-                        ['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS'].includes(repScanStage) ? "Step 2" :
-                        ['GPS_SCANNING', 'GPS_SUCCESS'].includes(repScanStage) ? "Step 3" : 
-                        repScanStage === 'READING_DATA' ? "Secure" : undefined
+                        ['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS'].includes(wakilScanStage) ? "Step 2" :
+                        ['GPS_SCANNING', 'GPS_SUCCESS'].includes(wakilScanStage) ? "Step 3" : 
+                        wakilScanStage === 'READING_DATA' ? "Secure" : undefined
                     }
+                    customDecryptingText="Authenticating Identity Chip"
                 />
               )}
             </motion.div>
@@ -430,15 +498,13 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               className="flex flex-col min-h-full py-10"
             >
                  <div className="flex-1 flex flex-col items-center p-6">
-                        {!photoCaptured && (
-                            <>
-                                <h3 className="text-2xl font-bold text-gov-900 mb-2">Proof of Condition</h3>
-                                <p className="text-gray-500 mb-8 text-center">Capture photo of pensioner to verify condition</p>
-                            </>
-                        )}
+                        <div className="text-center mb-8">
+                            <h3 className="text-2xl font-bold text-gov-900 mb-2">Proof of Condition</h3>
+                            <p className="text-gray-500">Capture photo of pensioner to verify condition</p>
+                        </div>
                     
                     {/* Camera/Upload Buttons */}
-                    {!isCameraActive && !photoCaptured && (
+                    {!isCameraActive && (
                         <div className="w-full max-w-md flex gap-4 mb-6">
                             <button
                                 onClick={handleCapturePhoto}
@@ -492,7 +558,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         onChange={handleFileUpload}
                     />
 
-                    {/* Photo Preview (Below Buttons) */}
+                    {/* Photo Preview */}
                     {photoCaptured && photoPreview && !isCameraActive && (
                          <div className="mb-8 relative w-full max-w-md flex flex-col items-center">
                              <div className="relative w-full h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 mb-6">
@@ -507,14 +573,22 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                     <X size={20} />
                                 </button>
                              </div>
-                             
-                             <button
-                                onClick={() => setStep('PENSIONER_CONSENT')}
-                                className="w-full py-4 rounded-xl bg-gov-900 text-white font-bold shadow-lg hover:bg-gov-800 transition-all flex items-center justify-center gap-2"
-                             >
-                                Proceed to Pensioner Consent <Check size={18} />
-                             </button>
                          </div>
+                    )}
+
+                    {/* Proceed Button */}
+                    {!isCameraActive && (
+                        <button
+                            onClick={() => setStep('PENSIONER_CONSENT')}
+                            disabled={!photoCaptured}
+                            className={`w-full max-w-md py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${
+                                photoCaptured 
+                                ? 'bg-gov-900 text-white hover:bg-gov-800' 
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                            Proceed to Pensioner Consent <Check size={18} />
+                        </button>
                     )}
                  </div>
             </motion.div>
@@ -603,7 +677,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                  )}
 
                                  {/* CONSENT: MAIN STAGES */}
-                                 {['INSERT_CARD', 'BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS', 'GPS_SCANNING', 'GPS_SUCCESS', 'READING_DATA'].includes(consentStage) && (
+                                 {['INSERT_CARD', 'BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS', 'GPS_SCANNING', 'GPS_SUCCESS'].includes(consentStage) && (
                                      <VerificationStages 
                                         stage={consentStage as ScanStage} 
                                         locationType="HOME"
@@ -613,11 +687,33 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                         stepLabel={
                                             consentStage === 'INSERT_CARD' ? "Step 1" :
                                             ['BIO_LOCK', 'BIO_SCANNING', 'BIO_SUCCESS'].includes(consentStage) ? "Step 2" :
-                                            ['GPS_SCANNING', 'GPS_SUCCESS'].includes(consentStage) ? "Step 3" : 
-                                            consentStage === 'READING_DATA' ? "Secure" : undefined
+                                            ['GPS_SCANNING', 'GPS_SUCCESS'].includes(consentStage) ? "Step 3" : undefined
                                         }
                                         customDecryptingText="Verifying consent & generating contract..."
                                      />
+                                 )}
+
+                                 {/* CONSENT: SIGNING (READING_DATA) */}
+                                 {consentStage === 'READING_DATA' && (
+                                     <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-20">
+                                         <motion.div 
+                                            initial={{ scale: 0.8, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="relative z-10 w-32 h-32 bg-purple-50 rounded-full flex items-center justify-center shadow-xl border-4 border-purple-500"
+                                         >
+                                             <motion.div
+                                                 animate={{ x: [0, 5, 0] }}
+                                                 transition={{ duration: 2, repeat: Infinity }}
+                                             >
+                                                 <FileSignature size={48} className="text-purple-600" />
+                                             </motion.div>
+                                         </motion.div>
+                                         <div className="absolute -bottom-16 left-0 right-0 text-center">
+                                             <p className="text-xs font-bold text-purple-600 uppercase tracking-widest animate-pulse">
+                                                 Digitally Signing Payment Warrant...
+                                             </p>
+                                         </div>
+                                     </div>
                                  )}
                              </div>
                         </div>
@@ -634,12 +730,29 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                 </div>
                             </div>
                         )}
+
+                        {/* Footer Progress Bar - Signing Phase */}
+                        {(consentStage === 'READING_DATA' || isSigning) && (
+                            <div className="w-full max-w-sm mx-auto px-8 pb-6 space-y-3 text-center shrink-0 mt-auto relative z-30">
+                                <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
+                                    <span>Signing Warrant</span>
+                                    <span>Secure</span>
+                                </div>
+                                <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                                    <motion.div 
+                                        initial={{ width: "0%" }}
+                                        animate={progressControls}
+                                        className="h-full bg-gov-900"
+                                    />
+                                </div>
+                            </div>
+                        )}
                  </div>
             </motion.div>
           )}
 
           {/* STEP 7: DIGITAL CONTRACT (SUCCESS) */}
-          {step === 'CONTRACT' && repData && (
+          {step === 'CONTRACT' && wakilData && (
             <motion.div
               key="contract"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -676,8 +789,9 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                           <div className="grid grid-cols-2 gap-6 mb-6">
                               <div>
                                   <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Appointed Wakil</p>
-                                  <p className="font-bold text-gray-900 leading-tight mb-0.5 text-base">{repData.name}</p>
-                                  <p className="font-mono text-xs text-gray-500">{repData.ic}</p>
+                                  <p className="font-bold text-gray-900 leading-tight mb-0.5 text-base">{wakilData.name}</p>
+                                  <p className="font-mono text-xs text-gray-500 mb-1">{wakilData.ic}</p>
+                                  <p className="text-[10px] text-gray-400 leading-tight">{wakilData.address}</p>
                               </div>
                               <div>
                                   <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Beneficiary</p>
@@ -704,7 +818,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                   amount: beneficiary.monthlyPayout,
                                   currency: "MYR",
                                   beneficiary_ic: beneficiary.ic,
-                                  wakil_ic: repData.ic,
+                                  wakil_ic: wakilData.ic,
                                   expiry: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
                                   signature: "dev_signed_hash_mock"
                                 })}
@@ -728,7 +842,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               </div>
 
               <button
-                onClick={() => onComplete(repData.name)}
+                onClick={() => onComplete(wakilData.name)}
                 className="w-full max-w-md bg-gov-900 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-gov-800 transition-all"
               >
                 Complete & Return to Dashboard
@@ -740,6 +854,17 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
       </div>
 
       {/* Progress Bar Removed */}
+
+      <AlertModal
+        isOpen={showExitAlert}
+        onClose={() => setShowExitAlert(false)}
+        title="Transaction in Progress"
+        message="Are you sure you want to cancel? All progress will be lost."
+        type="warning"
+        actionLabel="Yes, Exit"
+        onAction={executeBackNavigation}
+        cancelLabel="Cancel"
+      />
     </div>
   );
 };
