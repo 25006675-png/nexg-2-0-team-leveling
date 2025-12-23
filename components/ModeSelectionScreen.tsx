@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, MapPin, AlertCircle, UserX, Home, AlertTriangle, Building2, Users } from 'lucide-react';
+import { ChevronLeft, MapPin, AlertCircle, UserX, Home, AlertTriangle, Building2, Users, ScanFace } from 'lucide-react';
 import { Beneficiary, VerificationType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -22,12 +22,23 @@ const ModeSelectionScreen: React.FC<ModeSelectionScreenProps> = ({ beneficiary, 
       exit={{ opacity: 0, x: -20 }}
       className="h-full flex flex-col relative p-6 md:p-0"
     >
-      {/* Back Button Logic */}
-      <div className="hidden md:flex mb-4 shrink-0">
-          <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-gov-900 transition-colors">
-              <ChevronLeft size={20} />
-              <span className="text-sm font-medium">Back</span>
-          </button>
+      {/* Standardized Header */}
+      <div className="flex items-center gap-4 mb-4 shrink-0">
+        <button 
+          onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <ChevronLeft size={20} />
+          <span className="font-bold text-sm">Back</span>
+        </button>
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Biometric Proof of Life</h2>
+          <div className="flex items-center gap-2 text-sm text-blue-600 font-medium">
+            <ScanFace size={14} />
+            <span>Select Verification Mode</span>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center bg-white md:bg-transparent rounded-3xl h-full relative">

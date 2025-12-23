@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, ChevronLeft, MapPin, Eye, Banknote, Calendar, Home, Building2, WifiOff } from 'lucide-react';
+import { Save, ChevronLeft, MapPin, Eye, Banknote, Calendar, Home, Building2, WifiOff, ScanFace } from 'lucide-react';
 import { Beneficiary } from '../types';
 import { OfflineManager } from '../utils/OfflineManager';
 import AlertModal from './AlertModal';
@@ -49,7 +49,7 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, ka
      setTimeout(() => {
          if (isOffline) {
              // Offline Flow
-             OfflineManager.addToQueue(beneficiary, kampungId, referenceId);
+             OfflineManager.addToQueue(beneficiary, kampungId, 'PROOF_OF_LIFE', referenceId);
              setPendingData(updatedData);
              setShowOfflineModal(true);
          } else {
@@ -86,15 +86,26 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, ka
         actionLabel={t.confirmation.understand}
       />
 
-      <div className="hidden md:flex mb-4">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-gov-900 transition-colors">
-            <ChevronLeft size={20} />
-            <span className="text-sm font-medium">{t.common.back}</span>
+      {/* Standardized Header */}
+      <div className="flex items-center gap-4 mb-6 shrink-0">
+        <button 
+          onClick={onBack}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <ChevronLeft size={20} />
+          <span className="font-bold text-sm">{t.common.back}</span>
         </button>
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Biometric Proof of Life</h2>
+          <div className="flex items-center gap-2 text-sm text-blue-600 font-medium">
+            <ScanFace size={14} />
+            <span>Confirm Identity Details</span>
+          </div>
+        </div>
       </div>
 
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gov-900">{t.confirmation.title}</h2>
         <div className="flex items-center gap-2 mt-2">
             <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-100 flex items-center gap-1">
                 <Eye size={10} />

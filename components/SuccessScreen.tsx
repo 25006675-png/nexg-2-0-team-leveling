@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, Download, Share2, ArrowRight, Shield, Lock, WifiOff } from 'lucide-react';
+import { Check, Download, Share2, ArrowRight, Shield, Lock, WifiOff, ScanFace, ChevronLeft } from 'lucide-react';
 import { Beneficiary } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -25,6 +25,25 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
       animate={{ opacity: 1, scale: 1 }}
       className="h-full flex flex-col p-6 md:p-0 items-center md:items-stretch"
     >
+      {/* Standardized Header */}
+      <div className="w-full flex items-center gap-4 mb-8 shrink-0">
+        <button 
+          onClick={onReset}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <ChevronLeft size={20} />
+          <span className="font-bold text-sm">Back</span>
+        </button>
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Biometric Proof of Life</h2>
+          <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+            <ScanFace size={14} />
+            <span>Verification Successful</span>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col items-center md:flex-row md:items-center md:gap-8 mb-8">
           {/* Success Animation Header */}
           <div className="relative shrink-0">

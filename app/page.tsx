@@ -361,7 +361,7 @@ const AppContent: React.FC = () => {
                               
                               // Special handling for Wakil internal steps
                               if (verificationMode === 'wakil' && step === 'wakil_verification') {
-                                  if (wakilInternalStep === 'LEGAL_DECLARATION' || wakilInternalStep === 'VERIFY_REP') activeIndex = currentSteps.indexOf('wakil_verify');
+                                  if (wakilInternalStep === 'LEGAL_DECLARATION' || wakilInternalStep === 'VERIFY_WAKIL') activeIndex = currentSteps.indexOf('wakil_verify');
                                   else if (wakilInternalStep === 'EVIDENCE') activeIndex = currentSteps.indexOf('wakil_evidence');
                                   else if (wakilInternalStep === 'PENSIONER_CONSENT') activeIndex = currentSteps.indexOf('wakil_consent');
                                   else if (wakilInternalStep === 'CONTRACT') activeIndex = currentSteps.indexOf('wakil_contract');

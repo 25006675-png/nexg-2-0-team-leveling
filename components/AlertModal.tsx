@@ -11,6 +11,7 @@ interface AlertModalProps {
   type?: 'success' | 'warning' | 'error' | 'info' | 'offline';
   actionLabel?: string;
   onAction?: () => void;
+  cancelLabel?: string;
 }
 
 const AlertModal: React.FC<AlertModalProps> = ({ 
@@ -20,7 +21,8 @@ const AlertModal: React.FC<AlertModalProps> = ({
   message, 
   type = 'info',
   actionLabel,
-  onAction
+  onAction,
+  cancelLabel
 }) => {
   const { t } = useLanguage();
 
@@ -69,13 +71,21 @@ const AlertModal: React.FC<AlertModalProps> = ({
                 <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{message}</p>
             </div>
             
-            <div className="p-4 bg-white border-t border-gray-100">
+            <div className="p-4 bg-white border-t border-gray-100 flex gap-3">
+                {cancelLabel && (
+                  <button 
+                      onClick={onClose}
+                      className="flex-1 py-3 bg-white text-gray-700 border border-gray-200 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
+                  >
+                      {cancelLabel}
+                  </button>
+                )}
                 <button 
                     onClick={() => {
                         if (onAction) onAction();
-                        onClose();
+                        else onClose();
                     }}
-                    className="w-full py-3 bg-gov-900 text-white rounded-xl font-bold text-sm hover:bg-gov-800 transition-colors shadow-lg shadow-blue-900/20"
+                    className={`flex-1 py-3 bg-gov-900 text-white rounded-xl font-bold text-sm hover:bg-gov-800 transition-colors shadow-lg shadow-blue-900/20 ${!cancelLabel ? 'w-full' : ''}`}
                 >
                     {actionLabel || t.common.dismiss}
                 </button>

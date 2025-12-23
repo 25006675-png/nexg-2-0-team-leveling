@@ -460,12 +460,15 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({ onVerifie
 
          {/* DEBUG OVERLAY */}
          {metrics && (
-            <div className="absolute top-2 left-2 z-50 bg-black/60 p-2 rounded text-[10px] font-mono text-green-400 pointer-events-none">
-                <p>EAR: {metrics.ear.toFixed(3)} (Thresh: &lt;0.30)</p>
-                <p>Smile: {metrics.smile.toFixed(3)} (Thresh: &gt;0.45)</p>
-                <p>Yaw: {metrics.yaw ? metrics.yaw.toFixed(2) : '0.00'}</p>
-                <p>State: {faceStep}</p>
-                <p>Challenge: {challenge || 'None'}</p>
+            <div className="absolute top-6 left-6 z-50 bg-black/60 p-3 rounded-lg text-[10px] font-mono text-green-400 pointer-events-none backdrop-blur-sm border border-green-500/30 shadow-lg">
+                <p className="font-bold mb-1 border-b border-green-500/30 pb-1">BIO_METRICS</p>
+                <div className="space-y-0.5">
+                    <p>EAR: {metrics.ear.toFixed(3)} <span className="text-gray-400">(&lt;0.30)</span></p>
+                    <p>Smile: {metrics.smile.toFixed(3)} <span className="text-gray-400">(&gt;0.45)</span></p>
+                    <p>Yaw: {metrics.yaw ? metrics.yaw.toFixed(2) : '0.00'}</p>
+                    <p>State: <span className="text-white">{faceStep}</span></p>
+                    <p>Challenge: <span className="text-yellow-400">{challenge || 'None'}</span></p>
+                </div>
             </div>
          )}
          

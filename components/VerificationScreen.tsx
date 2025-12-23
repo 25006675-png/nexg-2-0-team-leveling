@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cpu, ChevronLeft, CheckCircle2, Fingerprint, MapPin, AlertCircle, UserX, Home, AlertTriangle, ScanLine, Radar, Satellite, Check, Building2, Users } from 'lucide-react';
+import { Cpu, ChevronLeft, CheckCircle2, Fingerprint, MapPin, AlertCircle, UserX, Home, AlertTriangle, ScanLine, Radar, Satellite, Check, Building2, Users, ScanFace } from 'lucide-react';
 import { Beneficiary, VerificationType } from '../types';
 import VerificationStages, { ScanStage } from './VerificationStages';
+import AlertModal from './AlertModal';
 
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -18,6 +19,7 @@ type ExceptionReason = 'DECEASED' | 'NOT_AT_HOME' | 'DAMAGED_ID' | null;
 const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete, beneficiary, onBack, verificationLocation }) => {
   const { t } = useLanguage();
   const [scanStage, setScanStage] = useState<ScanStage>('INSERT_CARD');
+  const [showExitAlert, setShowExitAlert] = useState(false);
   
   useEffect(() => {
       // Start the scan sequence automatically when component mounts
@@ -26,6 +28,17 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
       }, 1500);
       return () => clearTimeout(timer);
   }, []);
+
+  const handleSmartBack = () => {
+    const criticalStages = ['BIO_SCANNING', 'BIO_SUCCESS', 'GPS_SCANNING', 'GPS_SUCCESS', 'READING_DATA'];
+    
+    if (criticalStages.includes(scanStage)) {
+        setShowExitAlert(true);
+        return;
+    }
+    
+    onBack();
+  };
 
   const handleBiometricAuth = () => {
       setScanStage('BIO_SCANNING');
@@ -62,17 +75,29 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="h-full flex flex-col relative p-6 md:p-0"
+      className="h-full flex flex-col relative"
     >
-      {/* Back Button Logic */}
-      <div className="hidden md:flex mb-4 shrink-0">
-          <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-gov-900 transition-colors">
-              <ChevronLeft size={20} />
-              <span className="text-sm font-medium">Back</span>
-          </button>
+      {/* Standardized Header (Wakil Style) */}
+      <div className="flex items-center gap-4 mb-4 shrink-0 px-6 pt-6">
+        <button 
+          onClick={handleSmartBack}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <ChevronLeft size={20} />
+          <span className="font-bold text-sm">Back</span>
+        </button>
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Biometric Proof of Life</h2>
+          <div className="flex items-center gap-2 text-sm text-blue-600 font-medium">
+            <ScanFace size={14} />
+            <span>Identity & Liveness Check</span>
+          </div>
+        </div>
       </div>
 
       {/* --- READER INTERFACE (Animation Stages) --- */}
+       <div className="flex-1 overflow-y-auto relative px-6 no-scrollbar">
        <VerificationStages 
           stage={scanStage} 
           locationType={verificationLocation}
@@ -86,6 +111,18 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
             scanStage === 'READING_DATA' ? "Secure" : undefined
           }
        />
+       </div>
+
+       <AlertModal
+        isOpen={showExitAlert}
+        onClose={() => setShowExitAlert(false)}
+        title="Transaction in Progress"
+        message="Are you sure you want to cancel? All progress will be lost."
+        type="warning"
+        actionLabel="Yes, Exit"
+        onAction={onBack}
+        cancelLabel="Cancel"
+      />
     </motion.div>
   );
 };

@@ -56,6 +56,11 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   const [isSigning, setIsSigning] = useState(false);
   const [showConsentBioScanner, setShowConsentBioScanner] = useState(false);
   const [consentStarted, setConsentStarted] = useState(false);
+  const [contractDetails, setContractDetails] = useState<{
+      verificationId: string;
+      contractId: string;
+      warrantId: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   
@@ -245,6 +250,18 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
             
             setTimeout(() => {
                setIsSigning(true);
+               
+               // Generate Contract Details
+               const verId = OfflineManager.generateReferenceId(beneficiary.ic);
+               const conId = `AUTH-${Date.now().toString().slice(-6)}-${Math.floor(Math.random()*1000)}`;
+               const warId = `KWAP-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000000)}`;
+               
+               setContractDetails({
+                   verificationId: verId,
+                   contractId: conId,
+                   warrantId: warId
+               });
+
                setTimeout(() => {
                  setIsSigning(false);
                  setStep('CONTRACT');
@@ -255,7 +272,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                          beneficiary,
                          kampungId,
                          'WAKIL_APPOINTMENT',
-                         undefined,
+                         verId,
                          { name: wakilData.name, ic: wakilData.ic }
                      );
                  }
@@ -752,7 +769,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
           )}
 
           {/* STEP 7: DIGITAL CONTRACT (SUCCESS) */}
-          {step === 'CONTRACT' && wakilData && (
+          {step === 'CONTRACT' && wakilData && contractDetails && (
             <motion.div
               key="contract"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -768,9 +785,12 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         <h2 className="text-xl font-black tracking-widest leading-none">KWAP PAYMENT WARRANT</h2>
                         <p className="text-[10px] font-medium text-gray-300 uppercase tracking-wider mt-1">Universal Cash Authorization</p>
                       </div>
-                      <div className="relative z-10 flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
-                          <Shield size={14} className="text-white" />
-                          <span className="text-[10px] font-bold text-white uppercase tracking-wider">Retirement Fund (Inc)</span>
+                      <div className="relative z-10 flex flex-col items-end">
+                          <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10 mb-1">
+                            <Shield size={14} className="text-white" />
+                            <span className="text-[10px] font-bold text-white uppercase tracking-wider">Retirement Fund (Inc)</span>
+                          </div>
+                          <p className="text-[10px] font-mono text-gray-400">{contractDetails.warrantId}</p>
                       </div>
                   </div>
 
@@ -796,14 +816,23 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                               <div>
                                   <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Beneficiary</p>
                                   <p className="font-bold text-gray-900 leading-tight mb-0.5 text-base">{beneficiary.name}</p>
-                                  <p className="font-mono text-xs text-gray-500">{beneficiary.ic}</p>
+                                  <p className="font-mono text-xs text-gray-500 mb-1">{beneficiary.ic}</p>
+                                  <p className="text-[10px] text-gray-400 leading-tight">{beneficiary.address}</p>
                               </div>
                           </div>
                           
-                           {/* Ref ID */}
-                          <div className="flex items-center gap-2 text-xs text-gray-400 font-mono bg-gray-50 py-2 px-3 rounded-lg border border-gray-100 border-dashed w-fit">
-                              <Check size={12} className="text-green-500" />
-                              <span>REF: POL-{Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
+                           {/* Ref IDs */}
+                          <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-xs text-gray-500 font-mono bg-gray-50 py-2 px-3 rounded-lg border border-gray-100 w-full">
+                                  <Check size={12} className="text-green-500 shrink-0" />
+                                  <span className="font-bold text-gray-400">POL ID:</span>
+                                  <span className="text-gray-900">{contractDetails.verificationId}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-gray-500 font-mono bg-blue-50 py-3 px-3 rounded-lg border border-blue-100 w-full">
+                                  <FileSignature size={14} className="text-blue-600 shrink-0" />
+                                  <span className="font-bold text-blue-400">CONTRACT REF:</span>
+                                  <span className="text-blue-900 font-bold text-sm">{contractDetails.contractId}</span>
+                              </div>
                           </div>
                       </div>
 
@@ -813,8 +842,9 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                               <QRCodeSVG 
                                 value={JSON.stringify({
                                   type: "KWAP_WARRANT_V1",
-                                  warrant_id: `KWAP-${Math.floor(Math.random() * 1000000)}`,
-                                  pol_ref: `POL-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                                  warrant_id: contractDetails.warrantId,
+                                  pol_ref: contractDetails.verificationId,
+                                  contract_ref: contractDetails.contractId,
                                   amount: beneficiary.monthlyPayout,
                                   currency: "MYR",
                                   beneficiary_ic: beneficiary.ic,
