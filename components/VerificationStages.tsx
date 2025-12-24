@@ -16,9 +16,44 @@ interface VerificationStagesProps {
   referenceImage?: string;
   stepLabel?: string;
   customDecryptingText?: string;
+  // Custom Text Overrides
+  customBioLockHeader?: string;
+  customBioLockSubtext?: string;
+  customBioInstruction?: string;
+  customBioScanningHeader?: string;
+  customBioScanningSubtext?: string;
+  customBioScanningStatus?: string;
+  customFaceButtonText?: string;
+  customStatusLabel?: string;
+  customSuccessHeader?: string;
+  customSuccessSubtext?: string;
+  customSuccessStatus?: string;
+  onContinue?: () => void;
+  continueLabel?: string;
 }
 
-const VerificationStages: React.FC<VerificationStagesProps> = ({ stage, locationType, onBioAuth, enableFaceScan = false, referenceImage, stepLabel, customDecryptingText }) => {
+const VerificationStages: React.FC<VerificationStagesProps> = ({ 
+    stage, 
+    locationType, 
+    onBioAuth, 
+    enableFaceScan = false, 
+    referenceImage, 
+    stepLabel, 
+    customDecryptingText,
+    customBioLockHeader,
+    customBioLockSubtext,
+    customBioInstruction,
+    customBioScanningHeader,
+    customBioScanningSubtext,
+    customBioScanningStatus,
+    customFaceButtonText,
+    customStatusLabel,
+    customSuccessHeader,
+    customSuccessSubtext,
+    customSuccessStatus,
+    onContinue,
+    continueLabel
+}) => {
   const { t } = useLanguage();
   const [bioMode, setBioMode] = useState<BioMode>('FINGERPRINT');
 
@@ -29,18 +64,18 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({ stage, location
             <div className="mb-12 text-center relative z-10 transition-all duration-300">
             <h3 className="text-2xl font-bold text-gov-900">
                 {stage === 'INSERT_CARD' && t.verification.secureConnection}
-                {stage === 'BIO_LOCK' && t.verification.identityLocked}
-                {stage === 'BIO_SCANNING' && t.verification.verifyingBiometrics}
-                {stage === 'BIO_SUCCESS' && t.verification.identityConfirmed}
+                {stage === 'BIO_LOCK' && (customBioLockHeader || t.verification.identityLocked)}
+                {stage === 'BIO_SCANNING' && (customBioScanningHeader || t.verification.verifyingBiometrics)}
+                {stage === 'BIO_SUCCESS' && (customSuccessHeader || t.verification.identityConfirmed)}
                 {stage === 'GPS_SCANNING' && t.verification.verifyingLocation}
                 {stage === 'GPS_SUCCESS' && t.verification.locationVerified}
                 {stage === 'READING_DATA' && t.verification.verifyingIdentity}
             </h3>
             <p className="text-gray-500 text-sm mt-1">
                 {stage === 'INSERT_CARD' && t.verification.establishingLink}
-                {stage === 'BIO_LOCK' && t.verification.bioRequired}
-                {stage === 'BIO_SCANNING' && t.verification.scanningThumb}
-                {stage === 'BIO_SUCCESS' && t.verification.bioMatched}
+                {stage === 'BIO_LOCK' && (customBioLockSubtext || t.verification.bioRequired)}
+                {stage === 'BIO_SCANNING' && (customBioScanningSubtext || t.verification.scanningThumb)}
+                {stage === 'BIO_SUCCESS' && (customSuccessSubtext || t.verification.bioMatched)}
                 {stage === 'GPS_SCANNING' && t.verification.validatingAgent.replace('{location}', locationType === 'HALL' ? t.verification.communityHall : t.verification.homeVisit)}
                 {stage === 'GPS_SUCCESS' && t.verification.locCheckPassed}
                 {stage === 'READING_DATA' && (customDecryptingText || t.verification.decrypting)}
@@ -99,13 +134,14 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({ stage, location
                     <div className={`absolute inset-0 rounded-full blur-xl ${stage === 'BIO_SCANNING' ? 'bg-red-500/40 animate-pulse' : 'bg-red-500/20'}`}></div>
                     <button 
                         onClick={stage === 'BIO_LOCK' ? onBioAuth : undefined}
-                        className={`w-32 h-32 bg-white rounded-full border-4 flex items-center justify-center shadow-2xl relative z-10 transition-all ${stage === 'BIO_SCANNING' ? 'border-red-400 scale-105' : 'border-red-100 active:scale-95'}`}
+                        className={`w-32 h-32 bg-white rounded-full border-4 flex flex-col items-center justify-center shadow-2xl relative z-10 transition-all duration-300 ${stage === 'BIO_SCANNING' ? 'border-red-400 scale-105 cursor-default' : 'border-red-100 hover:border-red-400 hover:scale-110 hover:shadow-red-200 active:scale-95 cursor-pointer'}`}
                     >
-                        <Fingerprint size={64} className={`text-red-500 ${stage === 'BIO_SCANNING' ? 'animate-pulse' : ''}`} />
+                        {stage === 'BIO_LOCK' && <span className="text-[8px] text-gray-400 font-bold mb-1 uppercase tracking-wider">Tap to simulate</span>}
+                        <Fingerprint size={64} className={`text-red-500 transition-transform duration-300 ${stage === 'BIO_SCANNING' ? 'animate-pulse' : 'group-hover:scale-110'}`} />
                     </button>
                     <div className="absolute top-full left-1/2 -translate-x-1/2 pt-6 text-center flex flex-col items-center gap-3 w-64">
                         <p className={`text-xs font-bold text-red-500 ${stage === 'BIO_SCANNING' ? 'animate-pulse uppercase tracking-widest' : 'text-center leading-relaxed'}`}>
-                            {stage === 'BIO_SCANNING' ? t.verification.verifying : t.verification.bioInstruction}
+                            {stage === 'BIO_SCANNING' ? t.verification.verifying : (customBioInstruction || t.verification.bioInstruction)}
                         </p>
                         
                         {enableFaceScan && stage === 'BIO_LOCK' && (
@@ -114,7 +150,7 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({ stage, location
                                 className="text-sm font-semibold text-gov-700 hover:text-gov-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-full transition-all flex items-center gap-2 mt-4 shadow-sm"
                             >
                                 <ScanFace size={18} />
-                                {t.verification.useFaceVerification}
+                                {customFaceButtonText || t.verification.useFaceVerification}
                             </button>
                         )}
                     </div>
@@ -245,17 +281,11 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({ stage, location
         <div className="w-full max-w-sm mx-auto px-8 pb-6 space-y-3 text-center shrink-0 mt-auto relative z-30">
             <div className="flex justify-between text-xs font-bold text-gov-700 uppercase tracking-wider px-1">
                 <span>
-                    {stage === 'BIO_LOCK' ? t.verification.waitingInput : 
-                        stage === 'BIO_SCANNING' ? "Scanning" :
-                        stage === 'BIO_SUCCESS' ? t.verification.authenticated :
+                    {stage === 'BIO_LOCK' ? (customStatusLabel || t.verification.waitingInput) : 
+                        stage === 'BIO_SCANNING' ? (customBioScanningStatus || "Scanning") :
+                        stage === 'BIO_SUCCESS' ? (customSuccessStatus || t.verification.authenticated) :
                         stage === 'GPS_SCANNING' ? t.verification.triangulating : 
                         stage === 'GPS_SUCCESS' ? t.verification.success : t.verification.accessingDb}
-                </span>
-                <span>
-                    {stepLabel || (stage === 'BIO_LOCK' || stage === 'BIO_SCANNING' ? t.verification.locked : 
-                        stage === 'BIO_SUCCESS' ? t.verification.unlocked :
-                        stage === 'GPS_SCANNING' ? t.verification.searching : 
-                        stage === 'GPS_SUCCESS' ? t.verification.matched : t.verification.secure)}
                 </span>
             </div>
             <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
@@ -277,7 +307,7 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({ stage, location
                         <div className="h-full bg-red-500 animate-pulse w-[40%]" />
                 )}
                 {stage === 'BIO_SUCCESS' && (
-                        <div className="h-full bg-green-500 w-[50%]" />
+                        <div className="h-full bg-green-500 w-full" />
                 )}
                     {stage === 'GPS_SCANNING' && (
                         <div className="h-full bg-blue-500 w-[80%] animate-pulse" />
@@ -286,6 +316,18 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({ stage, location
                         <div className="h-full bg-green-500 w-full" />
                 )}
             </div>
+
+            {/* Continue Button */}
+            {onContinue && (stage === 'BIO_SUCCESS' || stage === 'GPS_SUCCESS') && (
+                <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={onContinue}
+                    className="w-full py-3 bg-gov-900 text-white rounded-xl font-bold shadow-lg hover:bg-gov-800 transition-all mt-4"
+                >
+                    {continueLabel || "Continue"}
+                </motion.button>
+            )}
         </div>
     </div>
   );

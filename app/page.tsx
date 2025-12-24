@@ -28,7 +28,7 @@ const AppContent: React.FC = () => {
   const [step, setStep] = useState<Step>('login');
   const [verificationMode, setVerificationMode] = useState<'standard' | 'wakil' | null>(null);
   const [verificationLocation, setVerificationLocation] = useState<VerificationType>('HOME');
-  const [wakilInternalStep, setWakilInternalStep] = useState<WakilStep>('LEGAL_DECLARATION');
+  const [wakilInternalStep, setWakilInternalStep] = useState<WakilStep>('RUNNER_PLEDGE');
   const [agentId, setAgentId] = useState('KK-0012-P');
   const [selectedKampung, setSelectedKampung] = useState<Kampung | null>(null);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
@@ -122,7 +122,11 @@ const AppContent: React.FC = () => {
   };
 
   const handleGeoSuccess = () => {
-    setStep('dashboard');
+    if (verificationMode === 'wakil') {
+        setStep('wakil_verification');
+    } else {
+        setStep('dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -135,7 +139,12 @@ const AppContent: React.FC = () => {
   const handleBack = () => {
     switch (step) {
       case 'geo_check':
-        handleLogout();
+        if (verificationMode === 'wakil') {
+            setStep('resident_profile');
+            setVerificationMode(null);
+        } else {
+            handleLogout();
+        }
         break;
       case 'dashboard':
         handleLogout();
@@ -184,7 +193,7 @@ const AppContent: React.FC = () => {
     if (mode === 'standard') {
       setStep('mode_selection');
     } else {
-      setStep('wakil_verification');
+      setStep('geo_check');
     }
   };
 
@@ -279,8 +288,8 @@ const AppContent: React.FC = () => {
   let currentSteps: string[] = [];
   if (verificationMode === 'standard') {
       currentSteps = ['mode_selection', 'verification', 'confirmation', 'success'];
-  } else if (verificationMode === 'wakil') {
-      currentSteps = ['wakil_verify', 'wakil_evidence', 'wakil_consent', 'wakil_contract'];
+  } else if (verificationMode === 'wakil' && step === 'wakil_verification') {
+      currentSteps = ['wakil_pledge', 'wakil_mandate', 'wakil_seal', 'wakil_warrant'];
   } else if (step === 'resident_profile') {
       currentSteps = [];
   } else if (step === 'verification' || step === 'confirmation' || step === 'success') {
@@ -297,10 +306,10 @@ const AppContent: React.FC = () => {
     verification: "Identity Check",
     confirmation: t.steps.confirmation,
     success: t.steps.success,
-    wakil_verify: "Verify Wakil",
-    wakil_evidence: "Evidence",
-    wakil_consent: "Pensioner Consent",
-    wakil_contract: "Digital Contract",
+    wakil_pledge: "Wakil's Declaration",
+    wakil_mandate: "Pensioner's Mandate",
+    wakil_seal: "Official Seal",
+    wakil_warrant: "Digital Warrant",
     settings: t.steps.settings,
     history: t.steps.history
   };
@@ -361,10 +370,10 @@ const AppContent: React.FC = () => {
                               
                               // Special handling for Wakil internal steps
                               if (verificationMode === 'wakil' && step === 'wakil_verification') {
-                                  if (wakilInternalStep === 'LEGAL_DECLARATION' || wakilInternalStep === 'VERIFY_WAKIL') activeIndex = currentSteps.indexOf('wakil_verify');
-                                  else if (wakilInternalStep === 'EVIDENCE') activeIndex = currentSteps.indexOf('wakil_evidence');
-                                  else if (wakilInternalStep === 'PENSIONER_CONSENT') activeIndex = currentSteps.indexOf('wakil_consent');
-                                  else if (wakilInternalStep === 'CONTRACT') activeIndex = currentSteps.indexOf('wakil_contract');
+                                  if (wakilInternalStep === 'RUNNER_PLEDGE') activeIndex = currentSteps.indexOf('wakil_pledge');
+                                  else if (wakilInternalStep === 'OWNER_MANDATE') activeIndex = currentSteps.indexOf('wakil_mandate');
+                                  else if (wakilInternalStep === 'WITNESS') activeIndex = currentSteps.indexOf('wakil_seal');
+                                  else if (wakilInternalStep === 'WARRANT') activeIndex = currentSteps.indexOf('wakil_warrant');
                               }
 
                               const thisIdx = idx;
