@@ -107,7 +107,7 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
   '1': [ // Kampung Buayan (Sabah)
     { 
       ic: "500101-13-1234", 
-      name: "Ali", 
+      name: "Ali bin Ahmad", 
       status: "Active",
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(28),
