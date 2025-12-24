@@ -44,7 +44,7 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
       />
 
       {/* Header */}
-      <div className="bg-white px-6 py-6 border-b border-gray-200 shadow-sm shrink-0 z-10">
+      <div className="bg-white px-6 pt-2 pb-6 border-b border-gray-200 shadow-sm shrink-0 z-10">
         <div className="flex items-center gap-4">
             <button 
             onClick={onBack}
@@ -85,7 +85,7 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
                 
                 <div className="flex-1">
                     <div className="flex justify-between items-start">
-                        <h3 className="text-lg font-bold text-gray-900">Biometric Proof of Life</h3>
+                        <h3 className="text-lg font-bold text-gray-900">Pension Continuation</h3>
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg ${
                             isProofOfLifeComplete 
                             ? 'bg-green-100 text-green-700' 
@@ -95,7 +95,7 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
                         </span>
                     </div>
                     <p className="text-gray-500 text-sm mt-1 leading-relaxed">
-                        Mandatory liveness check to verify physical presence.
+                        Perform Proof of Life to release funds directly to your <strong className="text-gray-700">registered bank account</strong>.
                     </p>
                     
                     {isProofOfLifeComplete && (
@@ -137,13 +137,13 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
                 
                 <div className="flex-1">
                     <div className="flex justify-between items-start">
-                        <h3 className="text-lg font-bold text-gray-900">Assign One-Time Wakil</h3>
+                        <h3 className="text-lg font-bold text-gray-900">Wakil Withdrawal</h3>
                         {!isProofOfLifeComplete && (
                             <Lock size={16} className="text-gray-400" />
                         )}
                     </div>
                     <p className="text-gray-500 text-sm mt-1 leading-relaxed">
-                        Authorize a temporary runner for this specific transaction. Valid for 24 hours only.
+                        Authorize a temporary Wakil to collect the <strong className="text-gray-700">current month's pension</strong> in cash. This mandate expires in <strong className="text-gray-700">72 hours</strong>.
                     </p>
                     
                     {!isProofOfLifeComplete ? (

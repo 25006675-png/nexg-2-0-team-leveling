@@ -51,7 +51,8 @@ export const translations = {
       resetDb: "Reset Database",
       noBeneficiaries: "No beneficiaries found",
       lastSync: "Last synced",
-      manualOffline: "Manual Offline Mode"
+      manualOffline: "Manual Offline Mode",
+      proceedAction: "Proceed to Action"
     },
     verification: {
       title: "Identity Check",
@@ -98,7 +99,7 @@ export const translations = {
       scanningThumb: "Scanning thumbprint against secure chip data...",
       bioMatched: "Biometric data matched with MyKad chip.",
       locCheckPassed: "Location check passed successfully.",
-      decrypting: "Decrypting secure chip & financial records...",
+      decrypting: "Verifying Profile against Chip Data...",
       gpsSuccessDesc: "Location verified successfully.",
       verifying: "Verifying...",
       touchUnlock: "Touch to Unlock",
@@ -300,7 +301,8 @@ export const translations = {
       resetDb: "Tetap Semula Pangkalan Data",
       noBeneficiaries: "Tiada penerima ditemui",
       lastSync: "Terakhir disinkronisasi",
-      manualOffline: "Mod Luar Talian Manual"
+      manualOffline: "Mod Luar Talian Manual",
+      proceedAction: "Teruskan ke Tindakan"
     },
     verification: {
       title: "Semakan Identiti",
@@ -373,7 +375,7 @@ export const translations = {
       bioMatched: "Data biometrik sepadan dengan cip MyKad.",
       validatingAgent: "Mengesahkan kehadiran ejen di koordinat {location}...",
       locCheckPassed: "Semakan lokasi lulus dengan berjaya.",
-      decrypting: "Menyahsulit cip selamat & rekod kewangan...",
+      decrypting: "Mengesahkan Profil dengan Data Cip...",
       verifying: "Mengesahkan...",
       touchUnlock: "Sentuh untuk Buka Kunci",
       match: "Padanan",

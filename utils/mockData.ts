@@ -107,17 +107,17 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
   '1': [ // Kampung Buayan (Sabah)
     { 
       ic: "500101-13-1234", 
-      name: "Abu Bakar", 
+      name: "Ali", 
       status: "Active",
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(28),
       monthlyPayout: 1250,
-      pendingMonths: 3,
+      pendingMonths: 1,
       address: "No. 10, Jalan Utama, Kampung Buayan, 89500 Sabah",
-      lastPaid: "Dec 2024",
-      photoUrl: "/mock-photos/Malay Uncle1.png",
-      completed: true,
-      serviceCount: 1
+      lastPaid: "Feb 2025",
+      photoUrl: "/mock-photos/Malay Uncle3.png",
+      completed: false,
+      serviceCount: 0
     },
     { 
       ic: "450101-03-2222", 
@@ -126,9 +126,9 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(30),
       monthlyPayout: 850,
-      pendingMonths: 3,
+      pendingMonths: 1,
       address: "No. 15, Jalan Utama, Kampung Buayan, 89500 Sabah",
-      lastPaid: "Dec 2024",
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Malay Aunty1.png",
       completed: false
     },
@@ -152,9 +152,9 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(35),
       monthlyPayout: 1100,
-      pendingMonths: 2,
+      pendingMonths: 1,
       address: "No. 25, Jalan Utama, Kampung Buayan, 89500 Sabah",
-      lastPaid: "Jan 2025",
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Chinese Uncle1.png",
       completed: false
     },
@@ -181,10 +181,10 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(5),
       monthlyPayout: 900,
-      pendingMonths: 0,
+      pendingMonths: 1,
       lastPaid: "Mar 2025",
       photoUrl: "/mock-photos/Other Uncle1.png",
-      completed: true
+      completed: false
     }
   ],
   '3': [ // Nanga Engkuah (Sarawak)
@@ -196,8 +196,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(40),
       monthlyPayout: 1200,
-      pendingMonths: 2,
-      lastPaid: "Jan 2025",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Other Uncle1.png",
       completed: false
     },
@@ -222,8 +222,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(60),
       monthlyPayout: 1000,
-      pendingMonths: 3,
-      lastPaid: "Dec 2024",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Chinese Uncle2.png",
       completed: false
     },
@@ -263,8 +263,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'RURAL',
       lastScanDate: getRelativeDate(42),
       monthlyPayout: 950,
-      pendingMonths: 2,
-      lastPaid: "Jan 2025",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Other Uncle2.png",
       completed: false
     },
@@ -289,8 +289,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'RURAL',
       lastScanDate: getRelativeDate(55),
       monthlyPayout: 1000,
-      pendingMonths: 3,
-      lastPaid: "Dec 2024",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Indian Uncle1.png",
       completed: false
     }
@@ -317,8 +317,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(48),
       monthlyPayout: 950,
-      pendingMonths: 2,
-      lastPaid: "Jan 2025",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Other Aunty2.png",
       completed: false
     },
@@ -343,8 +343,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(70),
       monthlyPayout: 900,
-      pendingMonths: 3,
-      lastPaid: "Dec 2024",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Other Aunty1.png",
       completed: false
     }
@@ -358,8 +358,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(20),
       monthlyPayout: 1100,
-      pendingMonths: 2,
-      lastPaid: "Jan 2025",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Chinese Uncle1.png",
       completed: false
     },
@@ -399,8 +399,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(45),
       monthlyPayout: 950,
-      pendingMonths: 2,
-      lastPaid: "Jan 2025",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Malay Aunty4.png",
       completed: false
     },
@@ -425,8 +425,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(90),
       monthlyPayout: 1000,
-      pendingMonths: 3,
-      lastPaid: "Dec 2024",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Other Uncle2.png",
       completed: false
     }
@@ -453,8 +453,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(50),
       monthlyPayout: 900,
-      pendingMonths: 2,
-      lastPaid: "Jan 2025",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Malay Aunty1.png",
       completed: false
     },
@@ -479,8 +479,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(35),
       monthlyPayout: 850,
-      pendingMonths: 2,
-      lastPaid: "Jan 2025",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Malay Aunty2.png",
       completed: false
     }
@@ -507,8 +507,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(38),
       monthlyPayout: 900,
-      pendingMonths: 2,
-      lastPaid: "Jan 2025",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Other Uncle1.png",
       completed: false
     },
@@ -533,8 +533,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(65),
       monthlyPayout: 1050,
-      pendingMonths: 3,
-      lastPaid: "Dec 2024",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Indian Uncle2.png",
       completed: false
     }
@@ -561,8 +561,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(44),
       monthlyPayout: 900,
-      pendingMonths: 2,
-      lastPaid: "Jan 2025",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Other Aunty2.png",
       completed: false
     },
@@ -587,8 +587,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       geography: 'DEEP_RURAL',
       lastScanDate: getRelativeDate(62),
       monthlyPayout: 850,
-      pendingMonths: 3,
-      lastPaid: "Dec 2024",
+      pendingMonths: 1,
+      lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Other Aunty1.png",
       completed: false
     }

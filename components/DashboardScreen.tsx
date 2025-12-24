@@ -113,14 +113,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     </div>
                 )}
 
-                {/* Network Status Indicator */}
-                <div 
-                    onClick={() => allowManualOfflineToggle && setIsOffline(!isOffline)}
-                    className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${isOffline ? 'bg-red-100 border-red-200 text-red-600' : 'bg-green-100 border-green-200 text-green-700'} ${allowManualOfflineToggle ? 'cursor-pointer hover:opacity-80' : ''}`}
-                >
-                    {isOffline ? <WifiOff size={16} /> : <Wifi size={16} />}
-                    <span className="text-[10px] font-bold mt-1 uppercase">{isOffline ? t.common.offline : t.common.online}</span>
-                </div>
+                {/* Network Status Indicator - Removed (Now Global) */}
             </div>
           </div>
 
@@ -216,7 +209,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                                   {b.ic}
                               </div>
                               <div className="flex items-center gap-1 text-xs font-bold text-gov-800 group-hover:text-blue-600">
-                                  {t.verification.title}
+                                  {t.dashboard.proceedAction}
                                   <ArrowDown size={12} className="-rotate-90"/>
                               </div>
                           </div>

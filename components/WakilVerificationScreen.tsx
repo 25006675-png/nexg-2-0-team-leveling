@@ -354,7 +354,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
   return (
     <div className="h-full flex flex-col relative bg-gray-50">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-4 shrink-0 px-6 pt-6">
+      <div className="flex items-center gap-4 mb-4 shrink-0 px-6 pt-2">
         <button 
           onClick={handleSmartBack}
           disabled={step === 'WARRANT'}
@@ -363,13 +363,15 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
           <ChevronLeft size={20} />
           <span className="font-bold text-sm">Back</span>
         </button>
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Wakil Withdrawal Authorization</h2>
+        <div className="flex-1">
+          <h2 className="text-xl font-bold text-gray-900">Wakil Withdrawal</h2>
           <div className="flex items-center gap-2 text-sm text-purple-600 font-medium">
             <Shield size={14} />
             <span>Authorize a representative for a one-time withdrawal.</span>
           </div>
         </div>
+        {/* Spacer for alignment with global indicator */}
+        <div className="w-24 hidden md:block"></div>
       </div>
 
       <div className="flex-1 overflow-y-auto relative px-6 no-scrollbar pb-10">
@@ -389,7 +391,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                   {!selectedWakil ? (
                     <div className="w-full">
                         <div className="mb-6 text-center">
-                            <h3 className="text-2xl font-bold text-gov-900">Step 1: The Wakil's Pledge</h3>
+                            <h3 className="text-2xl font-bold text-gov-900">Step 1: The Wakil's Declaration</h3>
                             <p className="text-gray-500 text-sm mt-1">Verify Wakil Identity</p>
                         </div>
                         
@@ -483,7 +485,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                 </span>
                             </label>
 
-                            <p className="text-[10px] text-gray-400 mt-2 px-2 leading-tight text-justify">
+                            <p className="text-xs text-gray-600 mt-3 px-2 leading-snug text-justify font-medium">
                                 By executing the biometric verification below, I hereby affix my unique biological identity to this digital instrument, acknowledging it carries the same legal validity as a wet signature under the <span className="font-bold">Digital Signature Act 1997</span>.
                             </p>
                         </div>
@@ -614,7 +616,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                             </span>
                         </label>
 
-                        <p className="text-[10px] text-gray-400 mt-2 px-2 leading-tight text-justify">
+                        <p className="text-xs text-gray-600 mt-3 px-2 leading-snug text-justify font-medium">
                             By executing the biometric verification below, I hereby affix my unique biological identity to this digital instrument, acknowledging it carries the same legal validity as a wet signature under the <span className="font-bold">Digital Signature Act 1997</span>.
                         </p>
                     </div>
@@ -631,7 +633,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                         }`}
                     >
                         <Fingerprint size={20} />
-                        <span>Stamp Authorization</span>
+                        <span>Execute Mandate</span>
                     </button>
                     )}
                 </div>
@@ -644,16 +646,16 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                     referenceImage={beneficiary.photoUrl}
                     stepLabel="Step 2: Pensioner's Mandate"
                     customDecryptingText="Reading MyKad Chip..."
-                    customBioLockHeader="Authorization Signature"
+                    customBioLockHeader="Mandate Execution"
                     customBioLockSubtext="Biometric verification serves as your digital signature for this mandate."
                     customBioInstruction="Place thumb on scanner to stamp your signature."
                     customFaceButtonText="Sign with Face ID "
                     customStatusLabel="Awaiting Execution"
-                    customSuccessHeader="Authorization Signed"
+                    customSuccessHeader="Mandate executed"
                     customSuccessSubtext="Mandate stamped. Funds are now releasable to the Wakil."
                     customSuccessStatus="Mandate Verified"
                     onContinue={() => setStep('WITNESS')}
-                    continueLabel="Proceed to Witness"
+                    ontinueLabel="Proceed to the Official Seal"
                     customBioScanningHeader="Verifying Biometric Pensioner..."
                     customBioScanningSubtext="Matching live thumbprint to MyKad to authorize fund release."
                     customBioScanningStatus="Matching Records..."
@@ -674,7 +676,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               {witnessScanStage === 'EVIDENCE' || witnessScanStage === 'DECLARATION' ? (
                 <div className="w-full">
                     <div className="mb-6 text-center">
-                        <h3 className="text-2xl font-bold text-gov-900">Step 3: The Witness</h3>
+                        <h3 className="text-2xl font-bold text-gov-900">Step 3: The Official Seal</h3>
                         <p className="text-gray-500 text-sm mt-1">Ketua Kampung / Officer Verification</p>
                     </div>
 
@@ -718,8 +720,13 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
 
                         {/* Photo Preview */}
                         {photoCaptured && photoPreview && !isCameraActive && (
-                            <div className="mb-6 relative w-full h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
-                                <img src={photoPreview} alt="Evidence" className="w-full h-full object-cover" />
+                            <div className="mb-6 relative w-full flex justify-center items-center bg-gray-100 rounded-xl overflow-hidden border border-gray-200" style={{ minHeight: '12rem' }}>
+                                <img 
+                                    src={photoPreview} 
+                                    alt="Evidence" 
+                                    className="max-h-96 max-w-full object-contain" 
+                                    style={{ display: 'block', margin: '0 auto' }}
+                                />
                                 <button 
                                     onClick={() => { setPhotoCaptured(false); setPhotoPreview(null); }}
                                     className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 backdrop-blur-sm z-10"
@@ -796,7 +803,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                             </span>
                         </label>
 
-                        <p className="text-[10px] text-gray-400 mt-2 px-2 leading-tight text-justify">
+                        <p className="text-xs text-gray-600 mt-3 px-2 leading-snug text-justify font-medium">
                             By applying my digital seal below, I hereby affix my official credentials to this digital instrument, acknowledging it carries the same legal validity as an official stamp and signature under the <span className="font-bold">Digital Signature Act 1997</span>.
                         </p>
 

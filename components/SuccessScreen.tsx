@@ -23,7 +23,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="h-full flex flex-col p-6 md:p-0 items-center md:items-stretch"
+      className="h-full flex flex-col px-6 pt-2 pb-6 md:p-0 items-center md:items-stretch"
     >
       {/* Standardized Header */}
       <div className="w-full flex items-center gap-4 mb-8 shrink-0">
@@ -36,10 +36,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
         </button>
 
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Biometric Proof of Life</h2>
+          <h2 className="text-xl font-bold text-gray-900">Pension Continuation</h2>
           <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
             <ScanFace size={14} />
-            <span>Verification Successful</span>
+            <span>Proof of Life for Fund Release</span>
           </div>
         </div>
       </div>
@@ -69,11 +69,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
                   {isOffline ? t.success.proofCaptured : t.success.verificationSuccessful}
                   <br/>{isOffline ? t.success.securelyStored : ''}
               </h2>
-              {!beneficiary.completed && (
-                <p className="text-gov-600 font-medium mt-1">
-                  Service {beneficiary.serviceCount || 0}/2 Completed
-                </p>
-              )}
               {beneficiary.completed && (
                 <p className="text-green-600 font-medium mt-1">
                   All Services Completed

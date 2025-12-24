@@ -7,8 +7,7 @@ import LoginScreen from '../components/LoginScreen';
 import AgentGeoCheck from '../components/AgentGeoCheck';
 import DashboardScreen from '../components/DashboardScreen';
 import ResidentProfile from '../components/ResidentProfile';
-import ModeSelectionScreen from '../components/ModeSelectionScreen';
-import VerificationScreen from '../components/ScanScreen';
+import VerificationScreen from '../components/VerificationScreen';
 import WakilVerificationScreen, { WakilStep } from '../components/WakilVerificationScreen';
 import ConfirmationScreen from '../components/VerifyScreen';
 import SuccessScreen from '../components/SuccessScreen';
@@ -20,8 +19,9 @@ import { OfflineManager } from '../utils/OfflineManager';
 import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 import { saveVerification } from '../services/OfflineStorage';
 import SyncStatusIndicator from '../components/SyncStatusIndicator';
+import NetworkStatus from '../components/NetworkStatus';
 
-export type Step = 'login' | 'geo_check' | 'dashboard' | 'resident_profile' | 'mode_selection' | 'verification' | 'wakil_verification' | 'confirmation' | 'success' | 'settings' | 'history';
+export type Step = 'login' | 'geo_check' | 'dashboard' | 'resident_profile' | 'verification' | 'wakil_verification' | 'confirmation' | 'success' | 'settings' | 'history';
 
 const AppContent: React.FC = () => {
   const { t } = useLanguage();
@@ -29,6 +29,7 @@ const AppContent: React.FC = () => {
   const [verificationMode, setVerificationMode] = useState<'standard' | 'wakil' | null>(null);
   const [verificationLocation, setVerificationLocation] = useState<VerificationType>('HOME');
   const [wakilInternalStep, setWakilInternalStep] = useState<WakilStep>('RUNNER_PLEDGE');
+  const [verificationInternalStep, setVerificationInternalStep] = useState<'MYKAD' | 'BIO'>('MYKAD');
   const [agentId, setAgentId] = useState('KK-0012-P');
   const [selectedKampung, setSelectedKampung] = useState<Kampung | null>(null);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
@@ -154,11 +155,8 @@ const AppContent: React.FC = () => {
         setSelectedBeneficiary(null);
         setVerificationMode(null);
         break;
-      case 'mode_selection':
-        setStep('resident_profile');
-        break;
       case 'verification':
-        setStep('mode_selection');
+        setStep('resident_profile');
         break;
       case 'wakil_verification':
         setStep('resident_profile');
@@ -191,15 +189,10 @@ const AppContent: React.FC = () => {
   const handleModeSelect = (mode: 'standard' | 'wakil') => {
     setVerificationMode(mode);
     if (mode === 'standard') {
-      setStep('mode_selection');
+      setStep('verification');
     } else {
       setStep('geo_check');
     }
-  };
-
-  const handleVerificationLocationSelect = (type: VerificationType) => {
-      setVerificationLocation(type);
-      setStep('verification');
   };
 
   const handleVerificationComplete = (type: VerificationType) => {
@@ -287,14 +280,14 @@ const AppContent: React.FC = () => {
   // Dynamic Steps Calculation
   let currentSteps: string[] = [];
   if (verificationMode === 'standard') {
-      currentSteps = ['mode_selection', 'verification', 'confirmation', 'success'];
+      currentSteps = ['mykad_verification', 'proof_of_life', 'confirmation', 'success'];
   } else if (verificationMode === 'wakil' && step === 'wakil_verification') {
       currentSteps = ['wakil_pledge', 'wakil_mandate', 'wakil_seal', 'wakil_warrant'];
   } else if (step === 'resident_profile') {
       currentSteps = [];
   } else if (step === 'verification' || step === 'confirmation' || step === 'success') {
       // Fallback if mode is lost but step is advanced (shouldn't happen with proper state)
-      currentSteps = ['mode_selection', 'verification', 'confirmation', 'success'];
+      currentSteps = ['verification', 'confirmation', 'success'];
   }
 
   const stepLabels: Record<string, string> = {
@@ -302,10 +295,11 @@ const AppContent: React.FC = () => {
     geo_check: t.steps.geo_check,
     dashboard: "Dashboard",
     resident_profile: "Resident Profile",
-    mode_selection: "Mode Selection",
-    verification: "Identity Check",
-    confirmation: t.steps.confirmation,
-    success: t.steps.success,
+    verification: "Proof of Life",
+    mykad_verification: "MyKad Verification",
+    proof_of_life: "Proof of Life",
+    confirmation: "Pension Confirmation",
+    success: "Completion Receipt",
     wakil_pledge: "Wakil's Declaration",
     wakil_mandate: "Pensioner's Mandate",
     wakil_seal: "Official Seal",
@@ -359,7 +353,7 @@ const AppContent: React.FC = () => {
                               <div className="mb-4 px-4 py-2 bg-white/10 rounded-lg border border-white/5">
                                   <p className="text-[10px] text-blue-200 uppercase tracking-widest font-bold mb-1">Service Mode</p>
                                   <p className="font-bold text-sm text-white">
-                                      {verificationMode === 'standard' ? 'Biometric Proof of Life' : 'Assign One-Time Wakil'}
+                                      {verificationMode === 'standard' ? 'Pension Continuation' : 'Wakil Withdrawal'}
                                   </p>
                               </div>
                           )}
@@ -368,6 +362,12 @@ const AppContent: React.FC = () => {
                               // Calculate active index based on mode
                               let activeIndex = currentSteps.indexOf(step);
                               
+                              // Special handling for Standard Mode internal steps
+                              if (verificationMode === 'standard' && step === 'verification') {
+                                  if (verificationInternalStep === 'MYKAD') activeIndex = currentSteps.indexOf('mykad_verification');
+                                  else activeIndex = currentSteps.indexOf('proof_of_life');
+                              }
+
                               // Special handling for Wakil internal steps
                               if (verificationMode === 'wakil' && step === 'wakil_verification') {
                                   if (wakilInternalStep === 'RUNNER_PLEDGE') activeIndex = currentSteps.indexOf('wakil_pledge');
@@ -458,6 +458,17 @@ const AppContent: React.FC = () => {
             </header>
           )}
 
+          {/* Global Network Status (Tablet/Desktop) */}
+          {step !== 'login' && (
+              <div className="absolute top-9 right-8 z-30 hidden md:block">
+                  <NetworkStatus 
+                      isOffline={isOffline} 
+                      allowToggle={allowManualOfflineToggle}
+                      onToggle={() => setIsOffline(!isOffline)}
+                  />
+              </div>
+          )}
+
           <div className="flex-1 overflow-y-auto no-scrollbar relative p-0 md:p-12 flex flex-col">
               <div className="flex-1 w-full max-w-2xl mx-auto h-full flex flex-col justify-center">
                 <AnimatePresence mode="wait">
@@ -508,29 +519,14 @@ const AppContent: React.FC = () => {
                       kampungId={selectedKampung.id}
                     />
                   )}
-                  {step === 'mode_selection' && selectedBeneficiary && (
-                    <ModeSelectionScreen
-                      key="mode_selection"
-                      beneficiary={selectedBeneficiary}
-                      onSelectMode={handleVerificationLocationSelect}
-                      onException={(reason) => {
-                         if (reason === 'NOT_AT_HOME') {
-                             handleBack();
-                         } else {
-                             handleVerificationLocationSelect('HOME');
-                         }
-                      }}
-                      onBack={handleBack}
-                    />
-                  )}
                   {step === 'verification' && selectedBeneficiary && (
                     <VerificationScreen 
                       key="verification"
                       beneficiary={selectedBeneficiary}
-                      beneficiaries={beneficiaries}
                       onScanComplete={handleVerificationComplete} 
                       onBack={handleBack}
                       verificationLocation={verificationLocation}
+                      onStepChange={setVerificationInternalStep}
                     />
                   )}
                   {step === 'confirmation' && selectedBeneficiary && selectedKampung && (
@@ -579,7 +575,7 @@ const AppContent: React.FC = () => {
       </div>
       
       {/* Global Sync Indicator */}
-      {step !== 'login' && <SyncStatusIndicator />}
+      {step !== 'login' && <SyncStatusIndicator onSync={handleSyncData} isOffline={isOffline} />}
     </div>
   );
 };

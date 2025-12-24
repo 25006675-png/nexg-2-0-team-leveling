@@ -42,7 +42,7 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack, kampungId }) => {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="h-full flex flex-col p-6 md:p-0"
+      className="h-full flex flex-col px-6 pt-2 pb-6 md:p-0"
     >
       <div className="flex items-center gap-4 mb-6">
         <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-600">

@@ -4,7 +4,7 @@ import { Cpu, Fingerprint, Check, Radar, MapPin, ScanFace, Lock, ShieldCheck } f
 import { useLanguage } from '../contexts/LanguageContext';
 import BiometricVerification from './BiometricVerification';
 
-export type ScanStage = 'PRE_SCAN' | 'INSERT_CARD' | 'BIO_LOCK' | 'BIO_SCANNING' | 'BIO_SUCCESS' | 'GPS_SCANNING' | 'GPS_SUCCESS' | 'READING_DATA';
+export type ScanStage = 'PRE_SCAN' | 'INSERT_CARD' | 'BIO_LOCK' | 'BIO_SCANNING' | 'BIO_SUCCESS' | 'GPS_SCANNING' | 'GPS_SUCCESS' | 'READING_DATA' | 'MYKAD_SUCCESS';
 
 export type BioMode = 'FINGERPRINT' | 'FACE';
 
@@ -70,6 +70,7 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                 {stage === 'GPS_SCANNING' && t.verification.verifyingLocation}
                 {stage === 'GPS_SUCCESS' && t.verification.locationVerified}
                 {stage === 'READING_DATA' && t.verification.verifyingIdentity}
+                {stage === 'MYKAD_SUCCESS' && "Identity Verified"}
             </h3>
             <p className="text-gray-500 text-sm mt-1">
                 {stage === 'INSERT_CARD' && t.verification.establishingLink}
@@ -79,6 +80,7 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                 {stage === 'GPS_SCANNING' && t.verification.validatingAgent.replace('{location}', locationType === 'HALL' ? t.verification.communityHall : t.verification.homeVisit)}
                 {stage === 'GPS_SUCCESS' && t.verification.locCheckPassed}
                 {stage === 'READING_DATA' && (customDecryptingText || t.verification.decrypting)}
+                {stage === 'MYKAD_SUCCESS' && "MyKad chip data matches beneficiary profile."}
             </p>
             </div>
 
@@ -113,6 +115,46 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
             </div>
             )}
 
+            {/* STAGE 1.5: MYKAD SUCCESS */}
+            {stage === 'MYKAD_SUCCESS' && (
+                <div className="relative w-64 h-64 flex items-center justify-center shrink-0 mb-20">
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0, rotateY: 90 }}
+                        animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                        transition={{ duration: 0.8, type: "spring" }}
+                        className="relative z-10 w-64 h-40 bg-gradient-to-br from-blue-700 via-blue-500 to-blue-300 rounded-xl shadow-xl border border-white/20 overflow-hidden flex flex-col p-3"
+                    >
+                        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                        
+                        {/* Mock MyKad UI */}
+                        <div className="flex justify-between items-start mb-2 relative z-10">
+                            <div className="w-8 h-8 bg-yellow-400/20 rounded-md border border-yellow-400/50 flex items-center justify-center">
+                                <div className="w-4 h-4 bg-yellow-500 rounded-sm"></div>
+                            </div>
+                            <div className="text-[8px] font-bold text-white/90 uppercase tracking-tighter">Malaysia Identity Card</div>
+                        </div>
+                        <div className="flex gap-3 relative z-10">
+                            <div className="w-16 h-20 bg-white/20 rounded-md border border-white/30 backdrop-blur-sm"></div>
+                            <div className="flex-1 space-y-1.5">
+                                <div className="h-2 w-3/4 bg-white/30 rounded-full"></div>
+                                <div className="h-2 w-1/2 bg-white/30 rounded-full"></div>
+                                <div className="h-2 w-full bg-white/10 rounded-full mt-2"></div>
+                            </div>
+                        </div>
+                        <div className="absolute bottom-0 right-0 w-20 h-20 bg-white/10 rounded-tl-full"></div>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.5, type: "spring" }}
+                        className="absolute -bottom-4 -right-4 bg-green-500 text-white p-3 rounded-full border-4 border-white shadow-lg z-20"
+                    >
+                        <Check size={28} strokeWidth={4} />
+                    </motion.div>
+                </div>
+            )}
+
             {/* STAGE 2: BIOMETRIC LOCK & SCANNING */}
             {(stage === 'BIO_LOCK' || stage === 'BIO_SCANNING') && (
                 bioMode === 'FACE' ? (
@@ -145,13 +187,20 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                         </p>
                         
                         {enableFaceScan && stage === 'BIO_LOCK' && (
-                            <button 
-                                onClick={() => setBioMode('FACE')}
-                                className="text-sm font-semibold text-gov-700 hover:text-gov-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-full transition-all flex items-center gap-2 mt-4 shadow-sm"
-                            >
-                                <ScanFace size={18} />
-                                {customFaceButtonText || t.verification.useFaceVerification}
-                            </button>
+                            <div className="flex flex-col items-center gap-3 mt-2 w-full">
+                                <div className="flex items-center gap-3 w-full">
+                                    <div className="h-px bg-gray-200 flex-1"></div>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase">OR</span>
+                                    <div className="h-px bg-gray-200 flex-1"></div>
+                                </div>
+                                <button 
+                                    onClick={() => setBioMode('FACE')}
+                                    className="text-sm font-semibold text-gov-700 hover:text-gov-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-full transition-all flex items-center gap-2 shadow-sm w-full justify-center"
+                                >
+                                    <ScanFace size={18} />
+                                    {customFaceButtonText || t.verification.useFaceVerification}
+                                </button>
+                            </div>
                         )}
                     </div>
                     </motion.div>
@@ -181,9 +230,8 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                         <Check size={24} strokeWidth={4} />
                     </motion.div>
                 </motion.div>
-                <div className="absolute -bottom-16 left-0 right-0 text-center">
-                        <p className="text-xs font-bold text-green-600 uppercase tracking-widest">{t.verification.identityVerified}</p>
-                        <p className="text-[10px] text-green-600/70 font-mono mt-1">{t.verification.match}: 99.9%</p>
+                <div className="absolute -bottom-8 left-0 right-0 text-center">
+                        <p className="text-xs font-bold text-green-600 uppercase tracking-widest">Bio-Match: 99.9%</p>
                     </div>
             </div>
             )}
@@ -266,14 +314,6 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                             className="absolute inset-0 border-t-4 border-blue-300 rounded-full"
                         />
                     </motion.div>
-                    <div className="absolute -bottom-16 left-0 right-0 text-center">
-                         <p className="text-xs font-bold text-blue-600 uppercase tracking-widest animate-pulse">
-                             {customDecryptingText || t.verification.decrypting}
-                         </p>
-                         <p className="text-[10px] text-blue-600/70 font-mono mt-1">
-                             {t.verification.secure}
-                         </p>
-                     </div>
                 </div>
             )}
         </div>
@@ -283,9 +323,12 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                 <span>
                     {stage === 'BIO_LOCK' ? (customStatusLabel || t.verification.waitingInput) : 
                         stage === 'BIO_SCANNING' ? (customBioScanningStatus || "Scanning") :
-                        stage === 'BIO_SUCCESS' ? (customSuccessStatus || t.verification.authenticated) :
+                        stage === 'BIO_SUCCESS' ? "Liveness: PASS" :
                         stage === 'GPS_SCANNING' ? t.verification.triangulating : 
-                        stage === 'GPS_SUCCESS' ? t.verification.success : t.verification.accessingDb}
+                        stage === 'GPS_SUCCESS' ? t.verification.success : 
+                        stage === 'MYKAD_SUCCESS' ? "MATCHED" :
+                        stage === 'READING_DATA' ? (customDecryptingText || t.verification.decrypting) :
+                        t.verification.accessingDb}
                 </span>
             </div>
             <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
@@ -299,6 +342,9 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                         transition={{ duration: 3, ease: "circInOut" }}
                         className="h-full bg-gov-900"
                     />
+                )}
+                {stage === 'MYKAD_SUCCESS' && (
+                    <div className="h-full bg-green-500 w-full" />
                 )}
                 {stage === 'BIO_LOCK' && (
                         <div className="h-full bg-red-500 animate-pulse w-[20%]" />
@@ -318,7 +364,7 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
             </div>
 
             {/* Continue Button */}
-            {onContinue && (stage === 'BIO_SUCCESS' || stage === 'GPS_SUCCESS') && (
+            {onContinue && (stage === 'BIO_SUCCESS' || stage === 'MYKAD_SUCCESS') && (
                 <motion.button
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

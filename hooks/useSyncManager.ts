@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getVerificationQueue, updateRecordStatus, VerificationRecord } from '../services/OfflineStorage';
 import { decryptPayload } from '../services/SecurityService';
+import { OfflineManager } from '../utils/OfflineManager';
 
-export const useSyncManager = () => {
+export const useSyncManager = (onSyncSuccess?: () => void, isAppOffline: boolean = false) => {
   const [pendingRecords, setPendingRecords] = useState<VerificationRecord[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [uploadHistory, setUploadHistory] = useState<string[]>([]);
@@ -48,42 +49,54 @@ export const useSyncManager = () => {
     });
   };
 
-  // Sync Loop
-  useEffect(() => {
-    if (!isOnline || pendingRecords.length === 0 || isSyncing) return;
+  const syncNow = async () => {
+    if (isSyncing || pendingRecords.length === 0) return;
+    
+    setIsSyncing(true);
 
-    const syncNext = async () => {
-      setIsSyncing(true);
-      const record = pendingRecords[0]; // Process one by one
-
-      try {
-        const decryptedData = decryptPayload(record.secureData);
+    try {
+        // 1. Upload Secure Records (The Vault)
+        // Simulate batch upload for better UX
+        await mockUploadToKWAP({ count: pendingRecords.length });
         
-        if (decryptedData) {
-          const success = await mockUploadToKWAP(decryptedData);
-          if (success) {
-            updateRecordStatus(record.id, 'SYNCED');
-            setUploadHistory(prev => [...prev, `Synced ID: ${record.id.substring(0, 8)}...`]);
-          }
-        } else {
-            // Data corruption
-            updateRecordStatus(record.id, 'FAILED');
-        }
-      } catch (error) {
-        console.error("Sync failed", error);
-      } finally {
-        setIsSyncing(false);
-        // The storage update will trigger refreshQueue via event listener
-      }
-    };
+        // Update all to SYNCED
+        pendingRecords.forEach(r => {
+            updateRecordStatus(r.id, 'SYNCED');
+        });
 
-    syncNext();
-  }, [isOnline, pendingRecords, isSyncing]);
+        // 2. Clear Dashboard Queue (OfflineManager)
+        const offlineQueue = OfflineManager.getQueue();
+        if (offlineQueue.length > 0) {
+            OfflineManager.moveToHistory(offlineQueue);
+            OfflineManager.clearQueue();
+        }
+
+        // 3. Trigger Parent Updates
+        if (onSyncSuccess) {
+            onSyncSuccess();
+        }
+
+        refreshQueue();
+    } catch (error) {
+        console.error("Sync failed", error);
+    } finally {
+        setIsSyncing(false);
+    }
+  };
+
+  // Auto-sync effect
+  useEffect(() => {
+      if (!isAppOffline && isOnline && pendingRecords.length > 0 && !isSyncing) {
+          syncNow();
+      }
+  }, [isOnline, pendingRecords.length, isSyncing, isAppOffline]);
 
   return {
-    isSyncing,
+    pendingRecords,
     pendingCount: pendingRecords.length,
+    isSyncing,
     uploadHistory,
-    isOnline
+    isOnline,
+    syncNow
   };
 };

@@ -25,7 +25,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="h-full flex flex-col p-6 md:p-0"
+      className="h-full flex flex-col px-6 pt-2 pb-6 md:p-0"
     >
       <div className="mb-8 flex items-center gap-4">
         <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gov-900">
