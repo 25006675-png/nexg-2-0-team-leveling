@@ -655,7 +655,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                     customSuccessSubtext="Mandate stamped. Funds are now releasable to the Wakil."
                     customSuccessStatus="Mandate Verified"
                     onContinue={() => setStep('WITNESS')}
-                    ontinueLabel="Proceed to the Official Seal"
+                    continueLabel="Proceed to the Official Seal"
                     customBioScanningHeader="Verifying Biometric Pensioner..."
                     customBioScanningSubtext="Matching live thumbprint to MyKad to authorize fund release."
                     customBioScanningStatus="Matching Records..."
