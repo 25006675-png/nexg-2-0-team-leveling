@@ -3,21 +3,24 @@ import { motion } from 'framer-motion';
 import { MapPin, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Kampung } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import AlertModal from './AlertModal';
 
 interface AgentGeoCheckProps {
   kampung: Kampung;
   onSuccess: () => void;
   isDevMode: boolean;
+  onRequestSettings?: () => void;
 }
 
 type GeoStatus = 'IDLE' | 'SEARCHING' | 'FOUND' | 'VERIFYING' | 'SUCCESS' | 'FAILED';
 
-const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDevMode }) => {
+const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDevMode, onRequestSettings }) => {
   const { t } = useLanguage();
   const [status, setStatus] = useState<GeoStatus>('IDLE');
   const [distance, setDistance] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [showBypassAlert, setShowBypassAlert] = useState(false);
 
   // Haversine formula to calculate distance in meters
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -80,6 +83,9 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
           } else {
              setStatus('FAILED');
              setErrorMsg(`${t.geo.outsideZone} (${Math.round(dist)}m)`);
+             if (!isDevMode && onRequestSettings) {
+                 setTimeout(() => setShowBypassAlert(true), 1000);
+             }
           }
         }, 1500);
     };
@@ -120,6 +126,9 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
         }
         setErrorMsg(msg);
         setStatus('FAILED');
+        if (!isDevMode && onRequestSettings) {
+            setTimeout(() => setShowBypassAlert(true), 500);
+        }
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -142,6 +151,20 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
       exit={{ opacity: 0 }}
       className="h-full flex flex-col items-center justify-center p-8 bg-white md:bg-transparent"
     >
+      <AlertModal
+        isOpen={showBypassAlert}
+        onClose={() => setShowBypassAlert(false)}
+        title="Location Verification Failed"
+        message="Would you like to enable Developer Mode to bypass location checks?"
+        type="warning"
+        actionLabel="Go to Settings"
+        onAction={() => {
+            setShowBypassAlert(false);
+            if (onRequestSettings) onRequestSettings();
+        }}
+        cancelLabel="Cancel"
+      />
+
       <div className="w-full max-w-sm text-center">
          
          <div className="relative w-64 h-64 mx-auto mb-10 flex items-center justify-center">

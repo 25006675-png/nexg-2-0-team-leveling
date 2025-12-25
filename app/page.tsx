@@ -15,7 +15,7 @@ import SettingsScreen from '../components/SettingsScreen';
 import HistoryScreen from '../components/HistoryScreen';
 import { Beneficiary, Kampung, VerificationType } from '../types';
 import { BENEFICIARIES_BY_KAMPUNG } from '../utils/mockData';
-import { OfflineManager } from '../utils/OfflineManager';
+import { OfflineManager, TransactionType } from '../utils/OfflineManager';
 import { LanguageProvider, useLanguage } from '../contexts/LanguageContext';
 import { saveVerification } from '../services/OfflineStorage';
 import SyncStatusIndicator from '../components/SyncStatusIndicator';
@@ -202,7 +202,7 @@ const AppContent: React.FC = () => {
     setStep('confirmation');
   };
 
-  const handleWakilComplete = (wakilName: string) => {
+  const handleWakilComplete = (wakilData: { name: string; ic: string }) => {
     if (!selectedBeneficiary) return;
 
     const currentServiceCount = selectedBeneficiary.serviceCount || 0;
@@ -219,8 +219,11 @@ const AppContent: React.FC = () => {
         verificationType: 'HOME' // Assuming Wakil is always Home/Bedridden
     };
 
-    updateBeneficiaryAndSave(finalBeneficiary);
-    setStep('success');
+    updateBeneficiaryAndSave(finalBeneficiary, 'WAKIL_APPOINTMENT', wakilData);
+    
+    // Direct redirect to dashboard as requested
+    setSelectedBeneficiary(null);
+    setStep('dashboard');
   };
 
   const handleConfirmationComplete = (updatedBeneficiary: Beneficiary) => {
@@ -241,7 +244,7 @@ const AppContent: React.FC = () => {
     setStep('success');
   };
 
-  const updateBeneficiaryAndSave = (finalBeneficiary: Beneficiary) => {
+  const updateBeneficiaryAndSave = (finalBeneficiary: Beneficiary, transactionType: TransactionType = 'PROOF_OF_LIFE', wakilData?: { name: string; ic: string }) => {
     setBeneficiaries(prev => prev.map(b => 
       b.ic === finalBeneficiary.ic ? finalBeneficiary : b
     ));
@@ -256,7 +259,9 @@ const AppContent: React.FC = () => {
         OfflineManager.addOnlineVerificationToHistory(
             finalBeneficiary, 
             selectedKampung.id, 
-            finalBeneficiary.referenceId || OfflineManager.generateReferenceId(finalBeneficiary.ic)
+            finalBeneficiary.referenceId || OfflineManager.generateReferenceId(finalBeneficiary.ic),
+            transactionType,
+            wakilData
         );
     }
   };
@@ -275,6 +280,12 @@ const AppContent: React.FC = () => {
         }));
         setBeneficiaries(patchedData);
     }
+  };
+
+  const handleRequestSettingsAndBypass = () => {
+      setIsDevMode(true);
+      setPreviousStep(step);
+      setStep('settings');
   };
 
   // Dynamic Steps Calculation
@@ -486,6 +497,7 @@ const AppContent: React.FC = () => {
                         kampung={selectedKampung}
                         onSuccess={handleGeoSuccess}
                         isDevMode={isDevMode}
+                        onRequestSettings={handleRequestSettingsAndBypass}
                     />
                   )}
                   {step === 'dashboard' && selectedKampung && (
@@ -517,6 +529,7 @@ const AppContent: React.FC = () => {
                       onBack={handleBack}
                       onStepChange={setWakilInternalStep}
                       kampungId={selectedKampung.id}
+                      isOffline={isOffline}
                     />
                   )}
                   {step === 'verification' && selectedBeneficiary && (

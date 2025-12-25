@@ -76,7 +76,12 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack, kampungId }) => {
                                   </div>
                               )}
                               <div>
-                                  <h3 className="font-bold text-gov-900 text-sm">{item.data.name}</h3>
+                                  <h3 className="font-bold text-gov-900 text-sm">
+                                      {item.data.name}
+                                      {item.type === 'WAKIL_APPOINTMENT' && item.data.wakilName && (
+                                          <span className="text-gray-500 font-normal"> (Wakil: {item.data.wakilName})</span>
+                                      )}
+                                  </h3>
                                   <p className="text-xs text-gray-500">
                                       {item.type === 'WAKIL_APPOINTMENT' ? 'Wakil Appointment' : 'Proof of Life'} • {formatTime(item.timestamp)}
                                   </p>

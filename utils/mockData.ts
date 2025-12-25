@@ -116,8 +116,8 @@ export const BENEFICIARIES_BY_KAMPUNG: Record<string, Beneficiary[]> = {
       address: "No. 10, Jalan Utama, Kampung Buayan, 89500 Sabah",
       lastPaid: "Feb 2025",
       photoUrl: "/mock-photos/Malay Uncle3.png",
-      completed: false,
-      serviceCount: 0
+      completed: true,
+      serviceCount: 2
     },
     { 
       ic: "450101-03-2222", 

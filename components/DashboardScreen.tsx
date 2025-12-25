@@ -105,20 +105,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </div>
             
             <div className="flex items-center gap-2">
-                {/* Pending Uploads Indicator */}
-                {pendingSyncList.length > 0 && (
-                    <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-lg border border-blue-100">
-                        <CloudUpload size={14} />
-                        <span className="text-xs font-bold">{pendingSyncList.length}</span>
-                    </div>
-                )}
-
                 {/* Network Status Indicator - Removed (Now Global) */}
             </div>
           </div>
 
           {/* Sync Status Banner */}
-          {queueStats.total > 0 && !isOffline && (
+          {queueStats.total > 0 && (
               <motion.div 
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -130,27 +122,23 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                           {queueStats.total} Records Pending ({queueStats.pol} Proof of Life, {queueStats.wakil} Wakil)
                       </span>
                   </div>
-                  <button 
-                    onClick={handleManualSync}
-                    disabled={isSyncing}
-                    className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
-                  >
-                      {isSyncing ? <RefreshCw size={12} className="animate-spin" /> : null}
-                      {isSyncing ? t.common.loading : t.dashboard.syncData}
-                  </button>
+                  
+                  {!isOffline ? (
+                    <button 
+                        onClick={handleManualSync}
+                        disabled={isSyncing}
+                        className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    >
+                        {isSyncing ? <RefreshCw size={12} className="animate-spin" /> : null}
+                        {isSyncing ? t.common.loading : t.dashboard.syncData}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1 text-xs font-bold text-blue-600/70 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                        <WifiOff size={12} />
+                        <span>Waiting for Connection</span>
+                    </div>
+                  )}
               </motion.div>
-          )}
-
-          {queueStats.total > 0 && isOffline && (
-              <div className="bg-gray-200 border border-gray-300 rounded-lg p-3 flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                      <CloudUpload size={16} className="text-gray-500" />
-                      <span className="text-xs font-bold text-gray-600">
-                          {queueStats.total} Records Pending ({queueStats.pol} Proof of Life, {queueStats.wakil} Wakil)
-                      </span>
-                  </div>
-                  <span className="text-[10px] font-bold text-gray-500 uppercase">{t.history.pendingUpload}</span>
-              </div>
           )}
 
           <p className="text-sm text-gray-600">

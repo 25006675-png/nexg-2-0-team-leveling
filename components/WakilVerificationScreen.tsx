@@ -7,15 +7,17 @@ import { useLanguage } from '../contexts/LanguageContext';
 import VerificationStages, { ScanStage } from './VerificationStages';
 import { OfflineManager } from '../utils/OfflineManager';
 import AlertModal from './AlertModal';
+import { encryptPayload } from '../services/SecurityService';
 
 export type WakilStep = 'RUNNER_PLEDGE' | 'OWNER_MANDATE' | 'WITNESS' | 'WARRANT';
 
 interface WakilVerificationScreenProps {
   beneficiary: Beneficiary;
-  onComplete: (wakilName: string) => void;
+  onComplete: (wakilData: { name: string; ic: string }) => void;
   onBack: () => void;
   onStepChange?: (step: WakilStep) => void;
   kampungId: string;
+  isOffline?: boolean;
 }
 
 // Mock Wakils
@@ -58,7 +60,7 @@ const TextCycler = () => {
     );
 };
 
-const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ beneficiary, onComplete, onBack, onStepChange, kampungId }) => {
+const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ beneficiary, onComplete, onBack, onStepChange, kampungId, isOffline }) => {
   const { t } = useLanguage();
   const [step, setStep] = useState<WakilStep>('RUNNER_PLEDGE');
   const [showExitAlert, setShowExitAlert] = useState(false);
@@ -107,6 +109,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
       verificationId: string;
       contractId: string;
       warrantId: string;
+      encryptedQr: string;
   } | null>(null);
 
   // --- HANDLERS ---
@@ -228,26 +231,39 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
       const conId = `AUTH-${Date.now().toString().slice(-6)}-${Math.floor(Math.random()*1000)}`;
       const warId = `KWAP-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000000)}`;
       
+      // Encrypt Payload
+      const payload = {
+          verId, conId, warId, 
+          beneficiary: beneficiary.ic,
+          wakil: selectedWakil?.ic,
+          timestamp: new Date().toISOString()
+      };
+      const encryptedQr = encryptPayload(payload);
+
       setContractDetails({
           verificationId: verId,
           contractId: conId,
-          warrantId: warId
+          warrantId: warId,
+          encryptedQr
       });
 
-      // Silent Save
-      if (selectedWakil) {
+      // Silent Save (Offline)
+      const isOfflineMode = isOffline !== undefined ? isOffline : !navigator.onLine;
+      if (isOfflineMode && selectedWakil) {
           OfflineManager.addToQueue(
               beneficiary,
               kampungId,
               'WAKIL_APPOINTMENT',
               verId,
-              { name: selectedWakil.name, ic: selectedWakil.ic }
+              { 
+                  encryptedData: encryptedQr,
+                  wakilName: selectedWakil.name,
+                  wakilIc: selectedWakil.ic
+              }
           );
       }
 
-      setTimeout(() => {
-        // setStep('WARRANT'); // Removed auto-transition
-      }, 1500);
+      // Removed auto-transition to allow manual "Finalize" click which triggers animation
     }, 2000);
   };
 
@@ -409,7 +425,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                                     <div className="w-4 h-4 rounded-full bg-purple-200 flex items-center justify-center shrink-0">
                                         <Check size={10} className="text-purple-700" strokeWidth={3} />
                                     </div>
-                                    <span>Age 18 Years & Above (Legal Adult)</span>
+                                    <span>Age 21 Years & Above (Legal Adult)</span>
                                 </li>
                                 <li className="flex items-center gap-2 text-sm text-purple-900">
                                     <div className="w-4 h-4 rounded-full bg-purple-200 flex items-center justify-center shrink-0">
@@ -665,7 +681,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
           )}
 
           {/* STEP 3: THE WITNESS */}
-          {step === 'WITNESS' && (
+          {step === 'WITNESS' && !isGeneratingWarrant && (
             <motion.div
               key="witness"
               initial={{ opacity: 0, x: 20 }}
@@ -900,7 +916,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ type: "spring", bounce: 0.3, duration: 0.8 }}
-              className="flex flex-col items-center justify-center w-full px-4"
+              className="flex flex-col items-center justify-center w-full px-4 relative"
             >
               <div className="w-full max-w-3xl bg-white border-2 border-gov-900 rounded-2xl overflow-hidden shadow-2xl mb-8">
                   {/* Header */}
@@ -965,18 +981,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
                       <div className="p-6 md:p-8 flex flex-col items-center justify-center bg-gray-50/50 md:w-80 shrink-0 border-l border-gray-100">
                           <div className="bg-white p-3 rounded-xl border-2 border-gray-900 shadow-sm mb-4">
                               <QRCodeSVG 
-                                value={JSON.stringify({
-                                  type: "KWAP_WARRANT_V1",
-                                  warrant_id: contractDetails.warrantId,
-                                  pol_ref: contractDetails.verificationId,
-                                  contract_ref: contractDetails.contractId,
-                                  amount: beneficiary.monthlyPayout,
-                                  currency: "MYR",
-                                  beneficiary_ic: beneficiary.ic,
-                                  wakil_ic: selectedWakil.ic,
-                                  expiry: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
-                                  signature: "dev_signed_hash_mock"
-                                })}
+                                value={contractDetails.encryptedQr}
                                 size={160}
                                 level="H"
                               />
@@ -997,7 +1002,7 @@ const WakilVerificationScreen: React.FC<WakilVerificationScreenProps> = ({ benef
               </div>
 
               <button
-                onClick={() => onComplete(selectedWakil.name)}
+                onClick={() => onComplete({ name: selectedWakil.name, ic: selectedWakil.ic })}
                 className="w-full max-w-md bg-gov-900 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-gov-800 transition-all"
               >
                 Complete & Return to Dashboard
