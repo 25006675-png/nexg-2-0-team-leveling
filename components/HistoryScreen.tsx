@@ -83,7 +83,7 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack, kampungId }) => {
                                       )}
                                   </h3>
                                   <p className="text-xs text-gray-500">
-                                      {item.type === 'WAKIL_APPOINTMENT' ? 'Wakil Appointment' : 'Proof of Life'} • {formatTime(item.timestamp)}
+                                      {item.type === 'WAKIL_APPOINTMENT' ? t.history.wakilAppointment : t.history.proofOfLife} • {formatTime(item.timestamp)}
                                   </p>
                               </div>
                           </div>
@@ -146,7 +146,7 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onBack, kampungId }) => {
                           
                           {selectedItem.type === 'WAKIL_APPOINTMENT' && (
                               <div className="flex justify-between bg-purple-50 p-2 rounded-lg">
-                                  <span className="text-purple-700 text-sm font-bold">Appointed Wakil</span>
+                                  <span className="text-purple-700 text-sm font-bold">{t.wakil.appointedWakil}</span>
                                   <span className="font-bold text-sm text-right text-purple-900">{selectedItem.data.wakilName}</span>
                               </div>
                           )}

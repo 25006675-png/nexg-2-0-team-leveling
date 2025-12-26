@@ -97,10 +97,10 @@ const VerifyScreen: React.FC<VerifyScreenProps> = ({ onVerified, beneficiary, ka
         </button>
 
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Pension continuation</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t.confirmation.title}</h2>
           <div className="flex items-center gap-2 text-sm text-blue-600 font-medium">
             <ScanFace size={14} />
-            <span>Proof of Life for Fund Release</span>
+            <span>{t.confirmation.subtitle}</span>
           </div>
         </div>
       </div>

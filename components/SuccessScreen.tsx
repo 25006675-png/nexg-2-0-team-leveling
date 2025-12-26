@@ -32,14 +32,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
         >
           <ChevronLeft size={20} />
-          <span className="font-bold text-sm">Back</span>
+          <span className="font-bold text-sm">{t.common.back}</span>
         </button>
 
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Pension Continuation</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t.confirmation.title}</h2>
           <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
             <ScanFace size={14} />
-            <span>Proof of Life for Fund Release</span>
+            <span>{t.confirmation.subtitle}</span>
           </div>
         </div>
       </div>
@@ -71,7 +71,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ onReset, beneficiary, isO
               </h2>
               {beneficiary.completed && (
                 <p className="text-green-600 font-medium mt-1">
-                  All Services Completed
+                  {t.success.allServicesCompleted}
                 </p>
               )}
               <p className="text-gray-500 text-sm mt-2 max-w-xs md:max-w-none">

@@ -304,17 +304,17 @@ const AppContent: React.FC = () => {
   const stepLabels: Record<string, string> = {
     login: t.steps.login,
     geo_check: t.steps.geo_check,
-    dashboard: "Dashboard",
-    resident_profile: "Resident Profile",
-    verification: "Proof of Life",
-    mykad_verification: "MyKad Verification",
-    proof_of_life: "Proof of Life",
-    confirmation: "Pension Confirmation",
-    success: "Completion Receipt",
-    wakil_pledge: "Wakil's Declaration",
-    wakil_mandate: "Pensioner's Mandate",
-    wakil_seal: "Official Seal",
-    wakil_warrant: "Digital Warrant",
+    dashboard: t.steps.dashboard,
+    resident_profile: t.steps.resident_profile,
+    verification: t.steps.verification,
+    mykad_verification: t.steps.mykad_verification,
+    proof_of_life: t.steps.verification,
+    confirmation: t.steps.confirmation,
+    success: t.steps.success,
+    wakil_pledge: t.steps.wakil_pledge,
+    wakil_mandate: t.steps.wakil_mandate,
+    wakil_seal: t.steps.wakil_seal,
+    wakil_warrant: t.steps.wakil_warrant,
     settings: t.steps.settings,
     history: t.steps.history
   };
@@ -362,9 +362,9 @@ const AppContent: React.FC = () => {
                       <nav className="space-y-0">
                           {verificationMode && (
                               <div className="mb-4 px-4 py-2 bg-white/10 rounded-lg border border-white/5">
-                                  <p className="text-[10px] text-blue-200 uppercase tracking-widest font-bold mb-1">Service Mode</p>
+                                  <p className="text-[10px] text-blue-200 uppercase tracking-widest font-bold mb-1">{t.common.serviceMode}</p>
                                   <p className="font-bold text-sm text-white">
-                                      {verificationMode === 'standard' ? 'Pension Continuation' : 'Wakil Withdrawal'}
+                                      {verificationMode === 'standard' ? t.common.pensionContinuation : t.common.wakilWithdrawal}
                                   </p>
                               </div>
                           )}
@@ -427,7 +427,7 @@ const AppContent: React.FC = () => {
                             }}
                             className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'dashboard' || step === 'resident_profile' ? 'bg-white text-gov-900 shadow-lg shadow-black/10' : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'}`}
                         >
-                            <Users size={18} className={step === 'dashboard' || step === 'resident_profile' ? 'text-gov-900' : 'text-yellow-400'} /> Dashboard
+                            <Users size={18} className={step === 'dashboard' || step === 'resident_profile' ? 'text-gov-900' : 'text-yellow-400'} /> {t.steps.dashboard}
                         </button>
                         <button onClick={() => handleNavToAux('history')} className={`flex items-center gap-3 text-sm font-medium w-full p-3 rounded-lg transition-all ${step === 'history' ? 'bg-white/10 text-white' : 'text-blue-200 hover:text-white hover:bg-white/5'}`}>
                             <FileText size={18} /> {t.common.history}
@@ -462,7 +462,7 @@ const AppContent: React.FC = () => {
                 <ChevronLeft size={24} />
               </button>
               <div className="absolute left-1/2 -translate-x-1/2 text-center max-w-[60%]">
-                <h1 className="text-gov-900 font-bold text-base leading-none truncate">{selectedKampung?.name || 'MyDigital Kampung'}</h1>
+                <h1 className="text-gov-900 font-bold text-base leading-none truncate">{selectedKampung?.name || t.common.appName}</h1>
                 <p className="text-gray-400 text-[10px] mt-0.5 font-mono">{agentId}</p>
               </div>
               <div className="w-8"></div>
@@ -497,6 +497,7 @@ const AppContent: React.FC = () => {
                         kampung={selectedKampung}
                         onSuccess={handleGeoSuccess}
                         isDevMode={isDevMode}
+                        isOffline={isOffline}
                         onRequestSettings={handleRequestSettingsAndBypass}
                     />
                   )}

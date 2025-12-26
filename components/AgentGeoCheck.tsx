@@ -9,12 +9,13 @@ interface AgentGeoCheckProps {
   kampung: Kampung;
   onSuccess: () => void;
   isDevMode: boolean;
+  isOffline?: boolean;
   onRequestSettings?: () => void;
 }
 
 type GeoStatus = 'IDLE' | 'SEARCHING' | 'FOUND' | 'VERIFYING' | 'SUCCESS' | 'FAILED';
 
-const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDevMode, onRequestSettings }) => {
+const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDevMode, isOffline, onRequestSettings }) => {
   const { t } = useLanguage();
   const [status, setStatus] = useState<GeoStatus>('IDLE');
   const [distance, setDistance] = useState<number | null>(null);
@@ -43,16 +44,6 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
     setErrorMsg('');
     setDistance(null);
 
-    if (!navigator.geolocation) {
-      setErrorMsg(t.extra.geoNotSupported);
-      setStatus('FAILED');
-      return;
-    }
-
-    // If Dev Mode is ON, we can bypass the real GPS check if it fails, 
-    // OR we can just mock the success callback directly.
-    // To be safe and robust, let's try to get position, but if it fails and we are in Dev Mode, we recover.
-    
     const handleSuccess = (position: GeolocationPosition) => {
         setStatus('FOUND');
         
@@ -130,6 +121,34 @@ const AgentGeoCheck: React.FC<AgentGeoCheckProps> = ({ kampung, onSuccess, isDev
             setTimeout(() => setShowBypassAlert(true), 500);
         }
     };
+
+    // If Offline AND Dev Mode (Bypass) are ON, skip real GPS check entirely
+    if (isOffline && isDevMode) {
+        const fakePosition = {
+            coords: {
+                latitude: kampung.lat,
+                longitude: kampung.lng,
+                accuracy: 10,
+                altitude: null,
+                altitudeAccuracy: null,
+                heading: null,
+                speed: null
+            },
+            timestamp: Date.now()
+        } as GeolocationPosition;
+        
+        // Small delay to simulate "Searching"
+        setTimeout(() => {
+            handleSuccess(fakePosition);
+        }, 1000);
+        return;
+    }
+
+    if (!navigator.geolocation) {
+      setErrorMsg(t.extra.geoNotSupported);
+      setStatus('FAILED');
+      return;
+    }
 
     navigator.geolocation.getCurrentPosition(
       handleSuccess,

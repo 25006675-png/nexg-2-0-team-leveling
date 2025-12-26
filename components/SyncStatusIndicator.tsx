@@ -2,6 +2,7 @@ import React from 'react';
 import { useSyncManager } from '../hooks/useSyncManager';
 import { RefreshCw, CheckCircle, WifiOff, CloudUpload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SyncStatusIndicatorProps {
     onSync?: () => void;
@@ -9,13 +10,14 @@ interface SyncStatusIndicatorProps {
 }
 
 const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ onSync, isOffline = false }) => {
+  const { t } = useLanguage();
   const { isSyncing, pendingCount, isOnline } = useSyncManager(onSync, isOffline);
 
   if (!isOnline || isOffline) {
       return (
           <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-full border border-gray-700 shadow-lg">
               <WifiOff size={14} className="text-gray-400" />
-              <span className="text-xs font-medium text-gray-400">Offline Mode</span>
+              <span className="text-xs font-medium text-gray-400">{t.sync.offlineMode}</span>
           </div>
       );
   }
@@ -43,9 +45,9 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ onSync, isOff
                         </div>
                         
                         <div className="text-center space-y-2">
-                            <h3 className="text-xl font-bold text-gray-900">Syncing to KWAP</h3>
+                            <h3 className="text-xl font-bold text-gray-900">{t.sync.syncingTitle}</h3>
                             <p className="text-gray-500 text-sm">
-                                Uploading {pendingCount} secure record{pendingCount !== 1 ? 's' : ''} to the cloud...
+                                {t.sync.uploadingDesc.replace('{count}', pendingCount.toString()).replace('{s}', pendingCount !== 1 ? 's' : '')}
                             </p>
                         </div>
 
@@ -76,10 +78,10 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ onSync, isOff
                         <CloudUpload size={20} className="text-cyan-400" />
                         <div className="flex flex-col">
                             <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
-                                Pending Upload
+                                {t.sync.pendingUpload}
                             </span>
                             <span className="text-[10px] text-cyan-200/70">
-                                {pendingCount} record{pendingCount !== 1 ? 's' : ''} waiting for connection
+                                {t.sync.waitingConnection.replace('{count}', pendingCount.toString()).replace('{s}', pendingCount !== 1 ? 's' : '')}
                             </span>
                         </div>
                     </motion.div>
@@ -94,7 +96,7 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ onSync, isOff
                         className="flex items-center gap-2 px-3 py-1.5 bg-green-900/80 rounded-full border border-green-500/30 shadow-lg backdrop-blur-sm"
                     >
                         <CheckCircle size={14} className="text-green-400" />
-                        <span className="text-xs font-medium text-green-100">All Records Secure</span>
+                        <span className="text-xs font-medium text-green-100">{t.sync.allSecure}</span>
                     </motion.div>
                 )}
             </AnimatePresence>

@@ -106,7 +106,7 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
           <h2 className="text-xl font-bold text-gray-900">Pension Continuation</h2>
           <div className="flex items-center gap-2 text-sm text-blue-600 font-medium">
             <ScanFace size={14} />
-            <span>Proof of Life for Fund Release</span>
+            <span>{t.confirmation.subtitle}</span>
           </div>
         </div>
       </div>
@@ -174,10 +174,10 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
             onBioAuth={handleBiometricAuth}
             enableFaceScan={true}
             referenceImage={beneficiary.photoUrl}
-            customBioLockHeader="Proof of Life Required"
-            customBioLockSubtext="Live biometric verification is required to decrypt your pension record."
-            customSuccessHeader="Proof of Life Accepted"
-            customSuccessSubtext="Physical presence verified. Pension record decrypted."
+            customBioLockHeader={t.verification.polRequired}
+            customBioLockSubtext={t.verification.polBioRequired}
+            customSuccessHeader={t.verification.polAccepted}
+            customSuccessSubtext={t.verification.polDecrypted}
             onContinue={() => {
                 if (scanStage === 'MYKAD_SUCCESS') {
                     setScanStage('BIO_LOCK');
@@ -185,12 +185,12 @@ const VerificationScreen: React.FC<VerificationScreenProps> = ({ onScanComplete,
                     onScanComplete(verificationLocation);
                 }
             }}
-            continueLabel={scanStage === 'MYKAD_SUCCESS' ? "Proceed to Proof of Life" : "Proceed to Pension Confirmation"}
+            continueLabel={scanStage === 'MYKAD_SUCCESS' ? t.verification.proceedPol : t.verification.proceedConfirmation}
             stepLabel={
-                ['INSERT_CARD', 'READING_DATA', 'MYKAD_SUCCESS'].includes(scanStage as string) ? "Step 1" :
-                ['BIO_LOCK', 'BIO_SCANNING'].includes(scanStage as string) ? "Step 2" :
-                ['GPS_SCANNING', 'GPS_SUCCESS'].includes(scanStage as string) ? "Step 3" :
-                scanStage === 'BIO_SUCCESS' ? "Verified" : undefined
+                ['INSERT_CARD', 'READING_DATA', 'MYKAD_SUCCESS'].includes(scanStage as string) ? `${t.common.step} 1` :
+                ['BIO_LOCK', 'BIO_SCANNING'].includes(scanStage as string) ? `${t.common.step} 2` :
+                ['GPS_SCANNING', 'GPS_SUCCESS'].includes(scanStage as string) ? `${t.common.step} 3` :
+                scanStage === 'BIO_SUCCESS' ? t.resident.verified : undefined
             }
         />
        )}

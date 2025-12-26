@@ -70,7 +70,7 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                 {stage === 'GPS_SCANNING' && t.verification.verifyingLocation}
                 {stage === 'GPS_SUCCESS' && t.verification.locationVerified}
                 {stage === 'READING_DATA' && t.verification.verifyingIdentity}
-                {stage === 'MYKAD_SUCCESS' && "Identity Verified"}
+                {stage === 'MYKAD_SUCCESS' && t.verification.identityVerified}
             </h3>
             <p className="text-gray-500 text-sm mt-1">
                 {stage === 'INSERT_CARD' && t.verification.establishingLink}
@@ -80,7 +80,7 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                 {stage === 'GPS_SCANNING' && t.verification.validatingAgent.replace('{location}', locationType === 'HALL' ? t.verification.communityHall : t.verification.homeVisit)}
                 {stage === 'GPS_SUCCESS' && t.verification.locCheckPassed}
                 {stage === 'READING_DATA' && (customDecryptingText || t.verification.decrypting)}
-                {stage === 'MYKAD_SUCCESS' && "MyKad chip data matches beneficiary profile."}
+                {stage === 'MYKAD_SUCCESS' && t.verification.chipMatch}
             </p>
             </div>
 
@@ -325,7 +325,7 @@ const VerificationStages: React.FC<VerificationStagesProps> = ({
                         stage === 'BIO_SCANNING' ? (customBioScanningStatus || "Scanning") :
                         stage === 'BIO_SUCCESS' ? "Liveness: PASS" :
                         stage === 'GPS_SCANNING' ? t.verification.triangulating : 
-                        stage === 'GPS_SUCCESS' ? t.verification.success : 
+                        stage === 'GPS_SUCCESS' ? t.verification.locationVerified : 
                         stage === 'MYKAD_SUCCESS' ? "MATCHED" :
                         stage === 'READING_DATA' ? (customDecryptingText || t.verification.decrypting) :
                         t.verification.accessingDb}

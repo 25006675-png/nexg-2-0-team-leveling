@@ -37,10 +37,10 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
       <AlertModal 
         isOpen={showAlreadyVerifiedModal}
         onClose={() => setShowAlreadyVerifiedModal(false)}
-        title="Verification Completed"
-        message={`Biometric Proof of Life has already been successfully verified.\n\nTimestamp: ${beneficiary.lastScanDate || new Date().toLocaleString()}`}
+        title={t.resident.verificationCompleted}
+        message={t.resident.alreadyVerifiedDesc.replace('{timestamp}', beneficiary.lastScanDate || new Date().toLocaleString())}
         type="success"
-        actionLabel="OK"
+        actionLabel={t.extra.ok}
       />
 
       {/* Header */}
@@ -58,7 +58,7 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
                 <span>{beneficiary.ic}</span>
                 {isProofOfLifeComplete && (
                     <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                        <CheckCircle2 size={10} /> Verified
+                        <CheckCircle2 size={10} /> {t.resident.verified}
                     </span>
                 )}
             </div>
@@ -85,23 +85,23 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
                 
                 <div className="flex-1">
                     <div className="flex justify-between items-start">
-                        <h3 className="text-lg font-bold text-gray-900">Pension Continuation</h3>
+                        <h3 className="text-lg font-bold text-gray-900">{t.common.pensionContinuation}</h3>
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg ${
                             isProofOfLifeComplete 
                             ? 'bg-green-100 text-green-700' 
                             : 'bg-red-100 text-red-700'
                         }`}>
-                            {isProofOfLifeComplete ? 'VERIFIED' : 'PENDING'}
+                            {isProofOfLifeComplete ? t.resident.verified.toUpperCase() : t.resident.pending}
                         </span>
                     </div>
                     <p className="text-gray-500 text-sm mt-1 leading-relaxed">
-                        Perform Proof of Life to release funds directly to your <strong className="text-gray-700">registered bank account</strong>.
+                        {t.resident.polDesc}
                     </p>
                     
                     {isProofOfLifeComplete && (
                         <div className="mt-3 flex items-center gap-2 text-xs text-green-600 font-medium">
                             <Clock size={14} />
-                            <span>Verified on {beneficiary.lastScanDate || new Date().toLocaleDateString()}</span>
+                            <span>{t.resident.verifiedOn.replace('{date}', beneficiary.lastScanDate || new Date().toLocaleDateString())}</span>
                         </div>
                     )}
                 </div>
@@ -137,24 +137,24 @@ const ResidentProfile: React.FC<ResidentProfileProps> = ({ beneficiary, onSelect
                 
                 <div className="flex-1">
                     <div className="flex justify-between items-start">
-                        <h3 className="text-lg font-bold text-gray-900">Wakil Withdrawal</h3>
+                        <h3 className="text-lg font-bold text-gray-900">{t.common.wakilWithdrawal}</h3>
                         {!isProofOfLifeComplete && (
                             <Lock size={16} className="text-gray-400" />
                         )}
                     </div>
                     <p className="text-gray-500 text-sm mt-1 leading-relaxed">
-                        Authorize a temporary Wakil to collect the <strong className="text-gray-700">current month's pension</strong> in cash. This mandate expires in <strong className="text-gray-700">72 hours</strong>.
+                        {t.resident.wakilDesc}
                     </p>
                     
                     {!isProofOfLifeComplete ? (
                         <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-xs font-bold text-gray-500">
                             <Lock size={12} />
-                            Complete Proof of Life first
+                            {t.resident.completePolFirst}
                         </div>
                     ) : (
                         <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold">
                             <ShieldCheck size={12} />
-                            Ready to Authorize
+                            {t.resident.readyToAuthorize}
                         </div>
                     )}
                 </div>

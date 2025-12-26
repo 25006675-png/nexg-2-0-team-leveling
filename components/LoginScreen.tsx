@@ -57,7 +57,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, agentId, setAgentId 
             <Shield className="text-yellow-500 w-12 h-12" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gov-900">MyDigital Kampung</h2>
+            <h2 className="text-2xl font-bold text-gov-900">{t.common.appName}</h2>
             <p className="text-sm text-gray-500 mt-1">{t.extra.portal}</p>
           </div>
         </div>
