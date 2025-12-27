@@ -66,10 +66,11 @@ Before starting the demo, please access the **Settings Menu** (Gear Icon) to con
 ### 🔴 The Judge Challenge: Connectivity Test
 **We invite judges to test the robustness of our "Offline-First" logic:**
 
-1.  **STEP 1: GO DARK.** Click the **Network Indicator** (top right) to force the app into **Offline Mode** (Red).
-2.  **STEP 2: PERFORM SERVICE.** Proceed with the verification below. Note that the transaction completes successfully and saves to the "Pending Queue".
-3.  **STEP 3: RECONNECT.** Click the **Network Indicator** again to go **Online** (Green).
-4.  **STEP 4: WATCH THE MAGIC.** Without clicking anything else, observe the "Sync Status". The system detects the signal and **immediately** uploads the encrypted payload to the server.
+1. **STEP 1: GO DARK.** Turn off the **Wi-Fi network**, **or** click the **Network Indicator** (top right, **clickable only in Network Simulation Mode**) to force the app into **Offline Mode** (Red).
+2. **STEP 2: PERFORM SERVICE.** Proceed with the verification below. Note that the transaction completes successfully and saves to the **Pending Queue**.
+3. **STEP 3: RECONNECT.** Turn the **Wi-Fi** back on, **or** click the **Network Indicator** again (**clickable only in Network Simulation Mode**) to go **Online** (Green).
+4. **STEP 4: WATCH THE MAGIC.** Without clicking anything else, observe the **Sync Status**. The system detects the signal and **immediately** uploads the encrypted payload to the server.
+
 
 ### Phase 1: The Visit (Offline)
 1.  **Select Location:** Choose a deep rural village (e.g., *Pos Gob, Kelantan*).
