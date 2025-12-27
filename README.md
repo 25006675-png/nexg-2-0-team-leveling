@@ -5,7 +5,7 @@
 > **Theme:** Inverting the Service Model – Bringing the Government to the People.
 
 ## 💡 Overview
-**MyDigital Kampung** is an **Offline-First Identity Verification System** designed to solve the "Last Mile" failure for rural pensioners. It empowers gazetted **Ketua Kampung (Village Heads)** to function as mobile agents, bringing government services directly to the doorstep of the **63,420 "Double-Trapped" citizens** (those who are both medically bedridden and geographically isolated).
+**MyDigital Kampung** is an **Offline-First Identity Verification System** designed to solve the "Last Mile" failure for rural pensioners. It empowers gazetted **Ketua Kampung (Village Heads)** to function as mobile agents, bringing government services directly to the doorstep of the **63,420 "Double-Trapped" citizens** (those who are both medically vulnerable and geographically isolated).
 
 By shifting the paradigm from *"Patient moves to System"* to *"System moves to Patient,"* we eliminate the physical and financial barriers that cause vulnerable citizens to lose their pensions.
 
